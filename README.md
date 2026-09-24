@@ -4,6 +4,10 @@ Aplicativo web para planejar e controlar as visitas de consultoria em segurança
 
 🔗 **App:** https://felipelima1991.github.io/agenda-foodlab/
 
+![Tela da agenda mensal com visitas, horas cumpridas × previstas e painel de horas por cliente](agenda-tela.png)
+
+*Tela do mês com os nomes dos clientes ocultos.*
+
 > O app é privado na prática: a página publicada não contém dados. Agenda, clientes e valores ficam no Google Drive do proprietário e só aparecem depois de conectar com uma chave de acesso.
 
 ---
