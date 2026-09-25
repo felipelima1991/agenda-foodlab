@@ -9,7 +9,7 @@
 :root{
   --bg:#eef2f5; --surface:#ffffff; --surface-2:#f6f8fa; --ink:#15212e; --ink-2:#4d5c6b; --ink-3:#8594a3;
   --line:#dbe3ea; --brand:#12395c; --brand-ink:#ffffff; --accent:#1f7a5c; --warn:#b4531a; --danger:#b3261e;
-  --p1:#1d5a8a; --p2:#2a7a6b; --p3:#6a4c93; --p4:#b5651d;
+  --p1:#1d5a8a; --p2:#2a7a6b; --p3:#6a4c93; --p4:#b5651d; --p5:#8a3d62;
   --pend-bg:#fff2d9; --pend-bd:#e6b252; --jess-bg:#e6f5ec; --jess-bd:#6db38a;
   --shadow:0 1px 2px rgba(18,57,92,.08),0 4px 14px rgba(18,57,92,.06);
   --r:10px;
@@ -18,14 +18,14 @@
 @media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){
   --bg:#0f1720; --surface:#16212c; --surface-2:#1c2936; --ink:#e7eef5; --ink-2:#aebccb; --ink-3:#7c8c9c;
   --line:#2a3a4a; --brand:#1c4a73; --accent:#3aa37f; --warn:#e08a4e; --danger:#ef6b62;
-  --p1:#4f8fc4; --p2:#46a894; --p3:#9a7cc7; --p4:#d9894a;
+  --p1:#4f8fc4; --p2:#46a894; --p3:#9a7cc7; --p4:#d9894a; --p5:#c77aa0;
   --pend-bg:#3a2d12; --pend-bd:#a57b2c; --jess-bg:#16352a; --jess-bd:#3f8b62;
   --shadow:0 1px 2px rgba(0,0,0,.3);
 }}
 :root[data-theme="dark"]{
   --bg:#0f1720; --surface:#16212c; --surface-2:#1c2936; --ink:#e7eef5; --ink-2:#aebccb; --ink-3:#7c8c9c;
   --line:#2a3a4a; --brand:#1c4a73; --accent:#3aa37f; --warn:#e08a4e; --danger:#ef6b62;
-  --p1:#4f8fc4; --p2:#46a894; --p3:#9a7cc7; --p4:#d9894a;
+  --p1:#4f8fc4; --p2:#46a894; --p3:#9a7cc7; --p4:#d9894a; --p5:#c77aa0;
   --pend-bg:#3a2d12; --pend-bd:#a57b2c; --jess-bg:#16352a; --jess-bd:#3f8b62;
   --shadow:0 1px 2px rgba(0,0,0,.3);
 }
@@ -63,7 +63,8 @@ button{cursor:pointer}
 .btn[disabled]{opacity:.5;cursor:not-allowed}
 .bar .grow{flex:1}
 .bar select{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 10px}
-.status{font-size:13px;color:var(--ink-2)}
+.status{font-size:13px;color:var(--ink-2);background:none;border:0;padding:4px 2px;font:inherit;font-size:13px;cursor:default;text-align:left}
+.status.err{color:#d93025;font-weight:600;cursor:pointer;text-decoration:underline}
 .status.dirty{color:var(--warn);font-weight:600}
 
 /* Título do mês */
@@ -127,6 +128,12 @@ body.side-off .sidetoggle{writing-mode:vertical-rl;padding:14px 8px;min-height:1
 .check{display:grid;gap:6px;margin:12px 0;font-size:13.5px;border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--surface-2)}
 .check label{display:flex;gap:8px;align-items:flex-start}
 .linkbtn{background:none;border:0;padding:0;color:inherit;font:inherit;text-decoration:underline;cursor:pointer}
+.card.rem{border-style:dashed;border-left-style:solid}
+.tag.remt{background:#e8f0fe;color:#1a4fa3;border-color:#c5d7f7}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .tag.remt{background:#1f2f4a;color:#9dbdf2;border-color:#2e4670}}
+.fin th{font-size:12px;color:var(--ink-2);font-weight:600;text-align:right;padding:4px 6px}
+.fin th:first-child{text-align:left}
+.fin td.n{text-align:right;white-space:nowrap}
 /* Abas recolhíveis */
 .folds{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;align-items:start}
 .folds{grid-template-columns:1fr 1fr 1fr}
@@ -290,15 +297,15 @@ label.f textarea{min-height:84px;resize:vertical}
       <div class="fold-body">
         <div class="stats">
           <div class="stat"><b id="s-rev">R$ 0</b><span id="s-rev-l">faturamento</span></div>
-          <div class="stat"><b id="s-cost">R$ 0</b><span>transporte adiantado • reembolso Tria</span></div>
-          <div class="stat net"><b id="s-net">R$ 0</b><span>total a receber (honorários + reembolso)</span></div>
+          <div class="stat"><b id="s-cost">R$ 0</b><span>transporte realizado • reembolso Tria</span></div>
+          <div class="stat net"><b id="s-net">R$ 0</b><span>a receber pelo que já foi realizado</span></div>
         </div>
         <table class="fin" id="fin"></table>
         <div class="nfhead"><h3>Notas fiscais do mês</h3><button type="button" class="btn sm" id="coBtn">Dados do emitente</button></div>
         <p class="small" id="nfEmit"></p>
         <div class="tblwrap"><table class="nf" id="nf"></table></div>
         <div class="nfacts"><span class="small" id="nfTot"></span><button type="button" class="btn sm" id="nfCsv">Exportar resumo para nota fiscal</button></div>
-        <p class="small">Valores brutos pelas horas cumpridas (visitas agendadas e realizadas; canceladas ficam fora). Ajuste as horas nos blocos antes de emitir. Impostos e retenções não estão calculados.</p>
+        <p class="small">Valor bruto só pelas horas das visitas <b>realizadas</b> (as agendadas aparecem ao lado; canceladas ficam fora). Ajuste as horas nos blocos e marque como Realizada antes de emitir. Impostos e retenções não estão calculados.</p>
         <div class="nfacts"><span class="small">O transporte é pago por você e reembolsado pela Tria.</span><button type="button" class="btn sm" id="reimbBtn2">🧾 Relatório de reembolso</button></div>
         <p class="small">Com esta aba aberta, o custo de transporte aparece embaixo de cada dia e pode ser ajustado. Tarifas 2026: integração ônibus + metrô R$ 9,38; metrô R$ 5,40; ônibus R$ 5,30.</p>
       </div>
@@ -322,13 +329,13 @@ label.f textarea{min-height:84px;resize:vertical}
       </div>
     </details>
     <details class="fold" id="helpFold">
-      <summary><span class="ft">❓ Como usar a agenda</span><small>mover, editar, nova visita e salvar</small><span class="chev" aria-hidden="true">▾</span></summary>
+      <summary><span class="ft">❓ Como usar a agenda</span><small>mover, editar e nova visita</small><span class="chev" aria-hidden="true">▾</span></summary>
       <div class="fold-body">
         <ol class="howto">
           <li><strong>Mover:</strong> arraste um bloco para outro dia. No celular, toque no bloco e troque a data.</li>
           <li><strong>Editar ou adicionar informação:</strong> toque no bloco para abrir. Use o campo de observações para pendências.</li>
           <li><strong>Nova visita:</strong> botão “+” no dia ou “Nova visita”. <strong>Excluir:</strong> dentro do bloco, com opção de desfazer.</li>
-          <li><strong>Salvar:</strong> automático no seu Google Drive, poucos segundos após cada mudança. Vale para celular e computador. Sem internet, fica guardado no aparelho e sobe quando a conexão voltar (ou toque em “Salvar agora”).</li>
+          <li><strong>Salvar:</strong> não precisa — é automático no seu Google Drive, poucos segundos após cada mudança. O aviso no topo mostra quando foi a última atualização. Vale para celular e computador. Sem internet, fica guardado no aparelho e sobe quando a conexão voltar (ou toque em “Salvar agora”).</li>
         </ol>
       </div>
     </details>
@@ -338,10 +345,9 @@ label.f textarea{min-height:84px;resize:vertical}
     <button class="btn primary" id="newBtn">+ Nova visita</button>
     <select id="filter" aria-label="Filtrar por cliente"><option value="">Todos os clientes</option></select>
     <span class="grow"></span>
-    <span class="status" id="saveStatus">Tudo salvo</span>
+    <button type="button" class="status" id="saveStatus" title="Salvamento automático no Google Drive">☁️ Conectando…</button>
     <button class="btn" id="reimbBtn">🧾 Relatório de reembolso</button>
     <button class="btn" id="csvBtn">Exportar planilha</button>
-    <button class="btn save" id="saveBtn" disabled>Salvar agora</button>
   </div>
 
   <div class="layout">
@@ -355,6 +361,7 @@ label.f textarea{min-height:84px;resize:vertical}
         <details class="panel pfold" open>
           <summary><h2>Horas por cliente</h2><span class="chev" aria-hidden="true">▾</span></summary>
           <div id="clients"></div>
+          <button type="button" class="btn sm" id="newClientBtn" style="margin-top:8px;width:100%">+ Novo cliente</button>
           <p class="small">Horas cumpridas × previstas no mês. Toque no cliente para editar endereço, contrato, CNPJ e observações.</p>
         </details>
         <details class="panel pfold" open>
@@ -364,6 +371,8 @@ label.f textarea{min-height:84px;resize:vertical}
             <span><i style="background:var(--p2)"></i>Campo Belo / Brooklin / V. Clementino</span>
             <span><i style="background:var(--p3)"></i>Bom Retiro / V. Madalena</span>
             <span><i style="background:var(--p4)"></i>Terça fixa: Bom Retiro → Guarulhos</span>
+            <span><i style="background:var(--p5)"></i>Outros / novos clientes</span>
+            <span><span class="tag remt">💻 Remota</span> visita remota — sem custo de transporte</span>
             <span><span class="tag pend">Pendente</span>de setembro</span>
             <span><span class="tag jess compName">acompanhante</span>visita de passagem</span>
             <span><span class="tag diff">prev. 4 h</span>horas cumpridas diferentes do previsto</span>
@@ -395,7 +404,10 @@ label.f textarea{min-height:84px;resize:vertical}
       <label class="f">Custo da ida até este cliente (R$)<input type="number" id="v-fare" min="0" step="0.01" placeholder="automático"></label>
       <div class="farehint" id="v-farehint"></div>
     </div>
-    <label class="f">Situação<select id="v-st"><option value="ag">Agendada</option><option value="ok">Realizada</option><option value="cn">Cancelada</option></select></label>
+    <div class="grid2">
+      <label class="f">Situação<select id="v-st"><option value="ag">Agendada</option><option value="ok">Realizada</option><option value="cn">Cancelada</option></select></label>
+      <label class="f">Modalidade<select id="v-mode"><option value="pre">Presencial</option><option value="rem">Remota (sem transporte)</option></select></label>
+    </div>
     <div class="checks">
       <label><input type="checkbox" id="v-pend"> Pendente de setembro</label>
       <label><input type="checkbox" id="v-jess"> Passagem com <span class="compName">acompanhante</span></label>
@@ -422,7 +434,7 @@ label.f textarea{min-height:84px;resize:vertical}
     </div>
     <div class="grid2">
       <label class="f">Horas previstas no mês<input type="number" id="c-hours" min="0" step="0.5"></label>
-      <label class="f">Polo<select id="c-polo"><option value="1">Itaim</option><option value="2">Campo Belo / Brooklin</option><option value="3">Bom Retiro / V. Madalena</option><option value="4">Terça fixa (Guarulhos)</option></select></label>
+      <label class="f">Polo<select id="c-polo"><option value="1">Itaim</option><option value="2">Campo Belo / Brooklin</option><option value="3">Bom Retiro / V. Madalena</option><option value="4">Terça fixa (Guarulhos)</option><option value="5">Outros / novos clientes</option></select></label>
     </div>
     <label class="f">Contrato<input id="c-contract"></label>
     <div class="grid2">
@@ -442,7 +454,7 @@ label.f textarea{min-height:84px;resize:vertical}
 <dialog id="dr">
   <form class="dlg wide" id="frr" method="dialog">
     <h3 id="dr-title">Relatório de reembolso</h3>
-    <div class="sub">Uma linha por trecho (cada ida e a volta). Trechos a pé (R$ 0,00) ficam de fora.</div>
+    <div class="sub">Uma linha por trecho (cada ida e a volta) das visitas presenciais <b>realizadas</b>. Visitas remotas e trechos a pé (R$ 0,00) ficam de fora.</div>
     <label class="f">Centro de custo<input id="r-cc" required></label>
     <div id="r-legs"></div>
     <div class="info" id="r-sum"></div>
@@ -526,7 +538,7 @@ label.f textarea{min-height:84px;resize:vertical}
   const PAIRS=()=>S.pairs||{};
   const r2 = n => Math.round(n*100)/100;
   function extra(cid){ const c=S.clients.find(x=>x.id===cid); return c&&c.extraFare?Number(c.extraFare):0; }
-  function dayList(d){ return S.visits.filter(v=>v.d===d&&v.st!=='cn').sort((a,b)=>a.t.localeCompare(b.t)); }
+  function dayList(d){ return S.visits.filter(v=>v.d===d&&v.st!=='cn'&&v.mode!=='rem').sort((a,b)=>a.t.localeCompare(b.t)); }
   function autoFare(v,list){ list=list||dayList(v.d); const i=list.indexOf(v); if(i<=0) return r2(FARE.bi+extra(v.c)); const k=list[i-1].c+'>'+v.c; const P=PAIRS(); return r2(((k in P)?P[k]:FARE.metro)+extra(v.c)); }
   function fareOf(v,list){ return v.fareM ? Number(v.fare) : autoFare(v,list); }
   function autoBack(d){ const l=dayList(d); return l.length ? r2(FARE.bi+extra(l[l.length-1].c)) : 0; }
@@ -608,7 +620,7 @@ label.f textarea{min-height:84px;resize:vertical}
   function cardEl(v){
     const c=client(v.c)||{name:'(cliente removido)',polo:1};
     const b=document.createElement('div'); b.setAttribute('role','button'); b.tabIndex=0;
-    b.className='card'+(v.st==='cn'?' canc':'')+(filterC && v.c!==filterC?' hidden':'');
+    b.className='card'+(v.st==='cn'?' canc':'')+(v.mode==='rem'?' rem':'')+(filterC && v.c!==filterC?' hidden':'');
     b.style.setProperty('--pc',poloVar(c.polo)); b.dataset.id=v.id; b.draggable=!readOnly;
     b.title=c.name+' • '+v.t+'–'+endOf(v)+' • '+hfmt(v.h)+(v.hp!==undefined?' (previsto '+hfmt(v.hp)+')':'')+(v.note?'\n'+v.note:'');
     let tags='';
@@ -616,6 +628,7 @@ label.f textarea{min-height:84px;resize:vertical}
     if(v.pend) tags+='<span class="tag pend">Pendente</span>';
     if(v.jess) tags+='<span class="tag jess">'+esc(S.companion||'acompanhante')+'</span>';
     if(v.st==='ok') tags+='<span class="tag done">Realizada</span>';
+    if(v.mode==='rem') tags+='<span class="tag remt">💻 Remota</span>';
     if(v.st==='cn') tags+='<span class="tag canc">Cancelada</span>';
     if(v.note) tags+='<span class="tag note" title="'+esc(v.note)+'">📝 obs.</span>';
     const hs=readOnly?'<small>'+hfmt(v.h)+'</small>':'<span class="hs"><button type="button" class="hstep" data-step="-0.5" aria-label="Menos meia hora">−</button><b>'+hfmt(v.h)+'</b><button type="button" class="hstep" data-step="0.5" aria-label="Mais meia hora">+</button></span>';
@@ -648,34 +661,50 @@ label.f textarea{min-height:84px;resize:vertical}
     const sel=$('#filter'); const cur=sel.value; sel.innerHTML='<option value="">Todos os clientes</option>'+S.clients.map(c=>'<option value="'+c.id+'">'+esc(c.name)+'</option>').join(''); sel.value=cur;
   }
 
+  // Transporte por trecho, atribuído à situação da visita (a volta segue a última visita presencial do dia)
+  function legCosts(){
+    const days=[...new Set(monthVisits().map(v=>v.d))]; const acc={ok:0,ag:0};
+    days.forEach(d=>{ const l=dayList(d); if(!l.length) return;
+      l.forEach(v=>{ acc[v.st==='ok'?'ok':'ag']+=fareOf(v,l); });
+      acc[l[l.length-1].st==='ok'?'ok':'ag']+=backOf(d); });
+    return {ok:r2(acc.ok),ag:r2(acc.ag)};
+  }
   function totals(){
-    const mv=monthVisits().filter(v=>v.st!=='cn');
-    const hours=mv.reduce((a,v)=>a+Number(v.h),0); const rev=hours*S.rate;
-    const days=[...new Set(mv.map(v=>v.d))]; const cost=r2(days.reduce((a,d)=>a+dayCostOf(d),0));
-    return {n:mv.length,hours,rev,cost,net:r2(rev+cost),days:days.length};
+    const mv=monthVisits().filter(v=>v.st!=='cn'); const lc=legCosts();
+    const part=st=>{ const vs=mv.filter(v=>v.st===st); const hours=vs.reduce((a,v)=>a+Number(v.h),0); const rev=r2(hours*S.rate);
+      const days=new Set(vs.filter(v=>v.mode!=='rem').map(v=>v.d)).size; const cost=lc[st]||0;
+      return {n:vs.length,rem:vs.filter(v=>v.mode==='rem').length,hours,rev,cost,net:r2(rev+cost),days}; };
+    const ok=part('ok'), ag=part('ag');
+    const allDays=[...new Set(mv.filter(v=>v.mode!=='rem').map(v=>v.d))];
+    const all={n:ok.n+ag.n,rem:ok.rem+ag.rem,hours:ok.hours+ag.hours,rev:r2(ok.rev+ag.rev),cost:r2(ok.cost+ag.cost),net:r2(ok.net+ag.net),days:allDays.length};
+    return Object.assign({ok,ag},all);
   }
   function renderFinance(){
     const t=totals();
-    $('#s-meta').textContent=t.n+' visitas • '+hfmt(t.hours)+' • '+t.days+' dias de campo';
-    $('#s-rev').textContent=brl(t.rev); $('#s-rev-l').textContent='faturamento (R$ '+S.rate+'/h)';
-    $('#s-cost').textContent=brl(t.cost); $('#s-net').textContent=brl(t.net);
-    $('#fin').innerHTML='<tr><td>Horas cumpridas/agendadas</td><td>'+hfmt(t.hours)+'</td></tr>'+
-      '<tr><td>Valor da hora</td><td>'+(readOnly?brl(S.rate):'<input id="rate" type="number" min="0" step="1" value="'+S.rate+'" style="width:80px;text-align:right;border:1px solid var(--line);border-radius:6px;background:var(--surface-2);padding:2px 6px" aria-label="Valor da hora">')+'</td></tr>'+
-      '<tr><td>Faturamento</td><td>'+brl(t.rev)+'</td></tr>'+
-      '<tr><td>Transporte adiantado por você ('+t.days+' dias) — reembolso da Tria</td><td>+ '+brl(t.cost)+'</td></tr>'+
-      '<tr class="tot"><td>Total a receber</td><td>'+brl(t.net)+'</td></tr>';
+    const pl=(n,s,p)=>n+' '+(n===1?s:p); $('#s-meta').textContent=pl(t.n,'visita','visitas')+' ('+pl(t.ok.n,'realizada','realizadas')+' • '+pl(t.ag.n,'agendada','agendadas')+(t.rem?' • '+pl(t.rem,'remota','remotas'):'')+') • '+hfmt(t.hours)+' • '+t.days+' dias de campo';
+    $('#s-rev').textContent=brl(t.ok.rev); $('#s-rev-l').textContent='honorários realizados (R$ '+S.rate+'/h)';
+    $('#s-cost').textContent=brl(t.ok.cost); $('#s-net').textContent=brl(t.ok.net);
+    const row=(lbl,a,b,c,cls)=>'<tr'+(cls?' class="'+cls+'"':'')+'><td>'+lbl+'</td><td class="n">'+a+'</td><td class="n">'+b+'</td><td class="n">'+c+'</td></tr>';
+    $('#fin').innerHTML='<tr><th></th><th>Realizado</th><th>Agendado</th><th>Total do mês</th></tr>'+
+      row('Visitas',t.ok.n,t.ag.n,t.n)+
+      row('• remotas (sem transporte)',t.ok.rem,t.ag.rem,t.rem)+
+      row('Horas',hfmt(t.ok.hours),hfmt(t.ag.hours),hfmt(t.hours))+
+      row('Honorários',brl(t.ok.rev),brl(t.ag.rev),brl(t.rev))+
+      row('Transporte adiantado — reembolso Tria','+ '+brl(t.ok.cost),'+ '+brl(t.ag.cost),'+ '+brl(t.cost))+
+      row('Total a receber','<b>'+brl(t.ok.net)+'</b>',brl(t.ag.net),brl(t.net),'tot')+
+      '<tr><td>Valor da hora</td><td class="n" colspan="3">'+(readOnly?brl(S.rate):'<input id="rate" type="number" min="0" step="1" value="'+S.rate+'" style="width:80px;text-align:right;border:1px solid var(--line);border-radius:6px;background:var(--surface-2);padding:2px 6px" aria-label="Valor da hora">')+'</td></tr>';
     const r=$('#rate'); if(r) r.addEventListener('change',()=>{const n=Number(r.value); if(n>=0){S.rate=n; markDirty();}});
   }
   function nfRows(){
     const mk=monthKey(); const mv=monthVisits().filter(v=>v.st!=='cn'); const bucket=S.nf[mk]||{};
-    return S.clients.map(c=>{ const vs=mv.filter(v=>v.c===c.id); const hrs=vs.reduce((a,v)=>a+Number(v.h),0); const prev=vs.reduce((a,v)=>a+Number(v.hp??v.h),0);
-      const r=bucket[c.id]||{num:'',st:'ae'}; return {c,hrs,prev,val:hrs*S.rate,num:r.num||'',st:r.st||'ae',n:vs.length}; }).filter(r=>r.n>0);
+    return S.clients.map(c=>{ const vs=mv.filter(v=>v.c===c.id); const hrs=vs.filter(v=>v.st==='ok').reduce((a,v)=>a+Number(v.h),0); const sch=vs.filter(v=>v.st==='ag').reduce((a,v)=>a+Number(v.h),0); const prev=vs.reduce((a,v)=>a+Number(v.hp??v.h),0);
+      const r=bucket[c.id]||{num:'',st:'ae'}; return {c,hrs,sch,prev,val:hrs*S.rate,num:r.num||'',st:r.st||'ae',n:vs.length}; }).filter(r=>r.n>0);
   }
   function renderNF(){
     const co=S.company; $('#nfEmit').textContent='Emitente: '+co.name+(co.cnpj?' • CNPJ '+co.cnpj:' • CNPJ não informado')+(co.resp?' • '+co.resp:'');
     const rows=nfRows(); const ro=readOnly?' disabled':'';
-    let html='<thead><tr><th>Cliente</th><th>Horas</th><th>Valor bruto</th><th>Nº da nota</th><th>Situação</th></tr></thead><tbody>';
-    rows.forEach(r=>{ const diff=r.prev!==r.hrs?' <small style="color:var(--warn)">prev. '+hfmt(r.prev)+'</small>':'';
+    let html='<thead><tr><th>Cliente</th><th>Horas realizadas</th><th>Valor bruto</th><th>Nº da nota</th><th>Situação</th></tr></thead><tbody>';
+    rows.forEach(r=>{ const diff=(r.sch?' <small>+ '+hfmt(r.sch)+' agendadas</small>':'')+(Math.abs(r.prev-(r.hrs+r.sch))>0.001?' <small style="color:var(--warn)">prev. '+hfmt(r.prev)+'</small>':'');
       html+='<tr class="'+(r.st!=='ae'?'emit':'')+'"><td class="cn">'+esc(r.c.name)+'<small>'+esc(r.c.razao||'Razão social não informada')+(r.c.cnpj?' • '+esc(r.c.cnpj):'')+'</small></td><td class="num">'+hfmt(r.hrs)+diff+'</td><td class="num">'+brl(r.val)+'</td>'+
       '<td><input data-nfnum="'+r.c.id+'" value="'+esc(r.num)+'" placeholder="—" aria-label="Número da nota de '+esc(r.c.name)+'"'+ro+'></td>'+
       '<td><select data-nfst="'+r.c.id+'" aria-label="Situação da nota de '+esc(r.c.name)+'"'+ro+'><option value="ae"'+(r.st==='ae'?' selected':'')+'>A emitir</option><option value="em"'+(r.st==='em'?' selected':'')+'>Emitida</option><option value="pg"'+(r.st==='pg'?' selected':'')+'>Paga</option></select></td></tr>'; });
@@ -689,11 +718,23 @@ label.f textarea{min-height:84px;resize:vertical}
     const s=e.target.closest('[data-nfst]'); if(s){ setNF(s.dataset.nfst,'st',s.value); }
   });
 
+  let syncErr=false;
+  function whenTxt(iso){ if(!iso) return ''; const d=new Date(iso); if(isNaN(d)) return ''; const now=new Date();
+    const hm=pad(d.getHours())+':'+pad(d.getMinutes());
+    if(d.toDateString()===now.toDateString()) return 'hoje às '+hm;
+    const y=new Date(now); y.setDate(now.getDate()-1); if(d.toDateString()===y.toDateString()) return 'ontem às '+hm;
+    return 'em '+pad(d.getDate())+'/'+pad(d.getMonth()+1)+' às '+hm; }
   function renderStatus(){
-    const s=$('#saveStatus'), b=$('#saveBtn');
-    if(readOnly){ s.textContent='Somente leitura'; s.className='status'; b.disabled=true; return; }
-    s.textContent=dirty?'Alterações pendentes…':'Salvo no Google Drive'; s.className='status'+(dirty?' dirty':''); b.disabled=!dirty;
+    const s=$('#saveStatus'); if(!s) return;
+    if(readOnly){ s.textContent='👁️ Somente leitura'; s.className='status'; return; }
+    if(!GS){ s.textContent='🔌 Não conectado ao Drive'; s.className='status err'; s.title='Toque para conectar'; return; }
+    if(saving){ s.textContent='⏳ Salvando…'; s.className='status'; return; }
+    if(syncErr){ s.textContent='⚠️ Sem conexão — guardado no aparelho (tocar para tentar)'; s.className='status err'; s.title='Toque para tentar enviar agora'; return; }
+    if(dirty){ s.textContent='✏️ Salvando alterações…'; s.className='status dirty'; return; }
+    const w=whenTxt(S.updatedAt); s.textContent=w?'☁️ Atualizado '+w:'☁️ Salvo no Google Drive'; s.className='status';
+    s.title=S.updatedAt?'Última atualização no Drive: '+new Date(S.updatedAt).toLocaleString('pt-BR'):'';
   }
+  setInterval(()=>{ if(!dirty&&!saving&&!syncErr) renderStatus(); },60000);
 
   // ---------- Ações ----------
   function moveVisit(id,d){
@@ -710,7 +751,7 @@ label.f textarea{min-height:84px;resize:vertical}
     $('#v-from').value=v&&v.from?v.from:''; $('#v-from').placeholder=v?'automático: '+fromOf(v):'automático: casa ou cliente anterior';
     $('#v-fare').value=v&&v.fareM?v.fare:''; $('#v-fare').placeholder=v?'automático: '+brl(autoFare(v)):'automático';
     $('#v-farehint').textContent=v?('Volta para casa no dia: '+brl(backOf(v.d))+' • total do dia '+brl(dayCostOf(v.d))):'O custo é calculado ao salvar.';
-    $('#v-st').value=base.st; $('#v-pend').checked=!!base.pend; $('#v-jess').checked=!!base.jess; $('#v-note').value=base.note||'';
+    $('#v-st').value=base.st; $('#v-mode').value=base.mode==='rem'?'rem':'pre'; $('#v-pend').checked=!!base.pend; $('#v-jess').checked=!!base.jess; $('#v-note').value=base.note||'';
     $('#dv-title').textContent=v?'Editar visita':'Nova visita'; $('#v-del').hidden=!v; $('#v-ok').textContent=v?'Aplicar':'Adicionar';
     updateInfo(); $('#dv').showModal();
   }
@@ -736,6 +777,7 @@ label.f textarea{min-height:84px;resize:vertical}
     if(editing){ target=S.visits.find(x=>x.id===editing); Object.assign(target,data); }
     else { S.seq=(S.seq||0)+1; target=Object.assign({id:'v'+S.seq},data); S.visits.push(target); }
     if(hpv!==data.h) target.hp=hpv; else delete target.hp;
+    if($('#v-mode').value==='rem') target.mode='rem'; else delete target.mode;
     const fromV=$('#v-from').value.trim(); if(fromV) target.from=fromV; else delete target.from;
     const fv=$('#v-fare').value.trim(); if(fv!==''&&Number(fv)>=0){ target.fareM=true; target.fare=r2(Number(fv)); } else { delete target.fareM; delete target.fare; }
     if(S.dayCost[data.d]===undefined) S.dayCost[data.d]=S.defaultCost;
@@ -749,13 +791,22 @@ label.f textarea{min-height:84px;resize:vertical}
   });
 
   function openClient(c){
-    editingClient=c.id; $('#dc-title').textContent=c.name;
-    $('#c-name').value=c.name; $('#c-addr').value=c.addr; $('#c-extra').value=c.extraFare||''; $('#c-route').value=c.route||''; $('#c-razao').value=c.razao||''; $('#c-cnpj').value=c.cnpj||''; $('#c-hours').value=expected(c); $('#c-polo').value=c.polo; $('#c-contract').value=c.contract; $('#c-info').value=c.info||'';
+    if(!c){ c={id:null,name:'',addr:'',extraFare:0,route:'',razao:'',cnpj:'',hours:0,polo:5,contract:'',info:''}; }
+    editingClient=c.id; $('#dc-title').textContent=c.id?c.name:'Novo cliente';
+    $('#c-name').value=c.name; $('#c-addr').value=c.addr; $('#c-extra').value=c.extraFare||''; $('#c-route').value=c.route||''; $('#c-razao').value=c.razao||''; $('#c-cnpj').value=c.cnpj||''; $('#c-hours').value=c.id?expected(c):''; $('#c-polo').value=c.polo; $('#c-contract').value=c.contract; $('#c-info').value=c.info||'';
     $('#dc').showModal();
   }
   $('#c-cancel').addEventListener('click',()=>$('#dc').close());
+  $('#newClientBtn').addEventListener('click',()=>openClient(null));
   $('#fc').addEventListener('submit',e=>{
-    e.preventDefault(); const c=client(editingClient); if(!c) return;
+    e.preventDefault();
+    if(!editingClient){
+      const name=$('#c-name').value.trim(); if(!name) return;
+      const nc={id:'c'+Date.now().toString(36),name,addr:$('#c-addr').value.trim(),extraFare:r2(Number($('#c-extra').value)||0),route:$('#c-route').value.trim(),razao:$('#c-razao').value.trim(),cnpj:$('#c-cnpj').value.trim(),hours:Number($('#c-hours').value)||0,polo:Number($('#c-polo').value)||5,contract:$('#c-contract').value.trim(),info:$('#c-info').value.trim()};
+      const mk=monthKey(); if(S.expected[mk]) S.expected[mk][nc.id]=nc.hours;
+      S.clients.push(nc); $('#dc').close(); markDirty(); toast('Cliente '+name+' cadastrado. Agora toque no + do dia para marcar a visita.'); return;
+    }
+    const c=client(editingClient); if(!c) return;
     Object.assign(c,{name:$('#c-name').value.trim()||c.name,addr:$('#c-addr').value.trim(),extraFare:r2(Number($('#c-extra').value)||0),route:$('#c-route').value.trim(),razao:$('#c-razao').value.trim(),cnpj:$('#c-cnpj').value.trim(),hours:(S.expected[monthKey()]&&S.expected[monthKey()][c.id]!==undefined)?c.hours:(Number($('#c-hours').value)||0),polo:Number($('#c-polo').value),contract:$('#c-contract').value.trim(),info:$('#c-info').value.trim()});
     const mk=monthKey(); if(S.expected[mk]&&S.expected[mk][c.id]!==undefined){ S.expected[mk][c.id]=Number($('#c-hours').value)||0; }
     $('#dc').close(); markDirty(); toast('Cliente atualizado.');
@@ -824,11 +875,12 @@ label.f textarea{min-height:84px;resize:vertical}
 
   // Exportar planilha (CSV)
   $('#csvBtn').addEventListener('click',async()=>{
-    const rows=[['Data','Dia','Entrada','Saída','Horas cumpridas','Cliente','Endereço','Situação','Pendente set.','Passagem '+(S.companion||'acompanhante'),'Valor (R$)','Observações']];
+    const rows=[['Data','Dia','Entrada','Saída','Horas cumpridas','Cliente','Endereço','Situação','Modalidade','Pendente set.','Passagem '+(S.companion||'acompanhante'),'Valor (R$)','Observações']];
     const st={ag:'Agendada',ok:'Realizada',cn:'Cancelada'};
     monthVisits().slice().sort((a,b)=>(a.d+a.t).localeCompare(b.d+b.t)).forEach(v=>{const c=client(v.c)||{}; const dt=new Date(v.d+'T12:00:00');
-      rows.push([v.d.split('-').reverse().join('/'),DOW[dt.getDay()],v.t,endOf(v),String(v.h).replace('.',','),c.name,c.addr,st[v.st],v.pend?'Sim':'Não',v.jess?'Sim':'Não',v.st==='cn'?'0':(v.h*S.rate).toFixed(2).replace('.',','),v.note||'']);});
-    const t=totals(); rows.push([]); rows.push(['Faturamento','','','','','','','','',t.rev.toFixed(2).replace('.',',')]); rows.push(['Transporte (reembolso Tria)','','','','','','','','',t.cost.toFixed(2).replace('.',',')]); rows.push(['Total a receber','','','','','','','','',t.net.toFixed(2).replace('.',',')]);
+      rows.push([v.d.split('-').reverse().join('/'),DOW[dt.getDay()],v.t,endOf(v),String(v.h).replace('.',','),c.name,c.addr,st[v.st],v.mode==='rem'?'Remota':'Presencial',v.pend?'Sim':'Não',v.jess?'Sim':'Não',v.st==='cn'?'0':(v.h*S.rate).toFixed(2).replace('.',','),v.note||'']);});
+    const t=totals(); const nn=x=>x.toFixed(2).replace('.',','); const blank=['','','','','','','','','','','']; rows.push([]); rows.push(['Resumo','','','','','','','','','Realizado','Agendado','Total']);
+    rows.push(['Honorários'].concat(blank.slice(0,8)).concat([nn(t.ok.rev),nn(t.ag.rev),nn(t.rev)])); rows.push(['Transporte (reembolso Tria)'].concat(blank.slice(0,8)).concat([nn(t.ok.cost),nn(t.ag.cost),nn(t.cost)])); rows.push(['Total a receber'].concat(blank.slice(0,8)).concat([nn(t.ok.net),nn(t.ag.net),nn(t.net)]));
     const csv='\ufeff'+rows.map(r=>r.map(x=>'"'+String(x??'').replace(/"/g,'""')+'"').join(';')).join('\r\n');
     const name='agenda-'+monthKey()+'.csv';
     exportDrive(name,csv);
@@ -846,9 +898,9 @@ label.f textarea{min-height:84px;resize:vertical}
   function reimbLegs(){
     const days=[...new Set(monthVisits().filter(v=>v.st!=='cn').map(v=>v.d))].sort(); const out=[];
     days.forEach(d=>{ const l=dayList(d); if(!l.length) return;
-      l.forEach(v=>{ const c=client(v.c)||{name:'?',addr:''}; const val=fareOf(v,l); const from=fromOf(v); const ex=extra(v.c);
+      l.forEach(v=>{ if(v.st!=='ok') return; const c=client(v.c)||{name:'?',addr:''}; const val=fareOf(v,l); const from=fromOf(v); const ex=extra(v.c);
         out.push({key:'v:'+v.id,d,kind:'ida',v,project:c.name,from,to:c.addr,value:val,auto:autoDesc('ida',val,Math.min(ex,val),from,c.addr),desc:v.fareDesc,shot:v.shot}); });
-      const last=l[l.length-1]; const lc=client(last.c)||{name:'?',addr:''}; const bv=backOf(d);
+      const last=l[l.length-1]; if(last.st!=='ok') return; const lc=client(last.c)||{name:'?',addr:''}; const bv=backOf(d);
       out.push({key:'b:'+d,d,kind:'volta',project:lc.name,from:lc.addr,to:S.home,value:bv,auto:autoDesc('volta',bv,Math.min(extra(last.c),bv),lc.addr,S.home),desc:(S.backDesc||{})[d],shot:(S.backShot||{})[d]});
     });
     return out.filter(x=>x.value>0);
@@ -871,8 +923,8 @@ label.f textarea{min-height:84px;resize:vertical}
         (x.shot?'<a class="ok" target="_blank" rel="noopener" href="'+x.shot.url+'">✓ print anexado</a>':'<span class="no">sem print</span>')+'</div></div>'; });
     $('#r-legs').innerHTML=html||'<p class="small">Nenhum trecho com custo neste mês.</p>';
     const tot=r2(L.reduce((a,x)=>a+x.value,0)); const miss=L.filter(x=>!x.shot).length;
-    const notDone=monthVisits().filter(v=>v.st==='ag').length;
-    $('#r-sum').innerHTML='<b>'+L.length+' trechos • total a reembolsar '+brl(tot)+'</b>'+(miss?'<br>⚠️ '+miss+' trecho(s) sem print do percurso.':'<br>✓ Todos os trechos têm print.')+(notDone?'<br>⚠️ '+notDone+' visita(s) ainda como “Agendada” — confira as horas e marque como Realizada.':'');
+    const notDone=monthVisits().filter(v=>v.st==='ag'&&v.mode!=='rem').length;
+    $('#r-sum').innerHTML='<b>'+L.length+' trechos • total a reembolsar '+brl(tot)+'</b>'+(miss?'<br>⚠️ '+miss+' trecho(s) sem print do percurso.':'<br>✓ Todos os trechos têm print.')+(notDone?'<br>ℹ️ '+notDone+' visita(s) presencial(is) ainda como “Agendada” não entram no relatório. Depois de realizadas, marque como Realizada.':'');
   }
   function setDesc(key,text){ const L=reimbLegs(); const x=L.find(y=>y.key===key); if(!x) return; const val=(text.trim()===x.auto||!text.trim())?undefined:text.trim();
     if(key.startsWith('v:')){ const v=S.visits.find(y=>y.id===key.slice(2)); if(val) v.fareDesc=val; else delete v.fareDesc; }
@@ -914,21 +966,25 @@ label.f textarea{min-height:84px;resize:vertical}
   async function save(force){
     if(!GS){ toast('Sem conexão com o Drive. As mudanças seguem guardadas neste aparelho.'); return; }
     if(saving){ clearTimeout(saveTimer); saveTimer=setTimeout(()=>save(force),1500); return; }
-    saving=true; $('#saveStatus').textContent='Salvando…'; $('#saveStatus').className='status';
+    saving=true; renderStatus();
+    const prevUpd=S.updatedAt; S.updatedAt=new Date().toISOString();
     try{
       const r=await call('saveState',JSON.stringify(S),baseRev,!!force);
       if(r.conflict){
-        saving=false;
+        saving=false; S.updatedAt=prevUpd;
         if(confirm('Existe uma versão mais nova salva em outro aparelho.\n\nOK = carregar a versão mais nova (as mudanças deste aparelho serão descartadas).\nCancelar = manter as mudanças deste aparelho e sobrescrever.')){ await loadServer(true); }
         else { await save(true); }
         return;
       }
       baseRev=r.rev; S.rev=r.rev; dirty=false; try{localStorage.removeItem(DRAFT_KEY)}catch(e){}
-      renderStatus(); $('#saveStatus').textContent='Salvo no Google Drive';
-    }catch(e){ dirty=true; renderStatus(); $('#saveStatus').textContent='Sem conexão — salvo neste aparelho'; }
+      syncErr=false; saving=false; renderStatus();
+    }catch(e){ dirty=true; syncErr=true; saving=false; S.updatedAt=prevUpd; renderStatus(); }
     saving=false;
   }
-  $('#saveBtn').addEventListener('click',()=>{ clearTimeout(saveTimer); save(false); });
+  $('#saveStatus').addEventListener('click',()=>{ if(!GS){ openConn(); return; } if(syncErr||dirty){ clearTimeout(saveTimer); save(false); } });
+  // Ao sair da página ou trocar de app, envia na hora o que estiver pendente
+  document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden' && dirty && GS && loaded){ clearTimeout(saveTimer); save(false); } });
+  window.addEventListener('online',()=>{ if(dirty&&GS&&loaded){ clearTimeout(saveTimer); save(false); } });
 
   async function loadServer(discardDraft){
     try{
