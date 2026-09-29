@@ -134,9 +134,17 @@ body.side-off .sidetoggle{writing-mode:vertical-rl;padding:14px 8px;min-height:1
 .fin th{font-size:12px;color:var(--ink-2);font-weight:600;text-align:right;padding:4px 6px}
 .fin th:first-child{text-align:left}
 .fin td.n{text-align:right;white-space:nowrap}
+.shotwrap{max-height:52vh;overflow:auto;border:1px solid var(--line);border-radius:10px;background:#fff;margin:8px 0}
+.shotwrap img{display:block;width:100%;height:auto}
+.cpl{border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin:6px 0;font-size:13.5px}
+.cpl.mv{border-color:var(--warn)}
+.cpl.no{border-color:#d93025;opacity:.8}
+.cpl small{display:block;color:var(--ink-2)}
+.closedrow{display:flex;gap:12px;flex-wrap:wrap;font-size:13.5px;padding:4px 0}
+.closedrow label{display:flex;gap:4px;align-items:center}
 /* Abas recolhíveis */
 .folds{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;align-items:start}
-.folds{grid-template-columns:1fr 1fr 1fr}
+.folds{grid-template-columns:1fr 1fr}
 .folds:has(details[open]){grid-template-columns:1fr}
 @media (max-width:1060px){.folds{grid-template-columns:1fr}}
 @media (max-width:760px){.folds{grid-template-columns:1fr}}
@@ -328,21 +336,12 @@ label.f textarea{min-height:84px;resize:vertical}
         <p class="small">Tarifas de 2026. Confira horários e itinerários no Google Maps pelo botão “Ver rota” dentro de cada visita.</p>
       </div>
     </details>
-    <details class="fold" id="helpFold">
-      <summary><span class="ft">❓ Como usar a agenda</span><small>mover, editar e nova visita</small><span class="chev" aria-hidden="true">▾</span></summary>
-      <div class="fold-body">
-        <ol class="howto">
-          <li><strong>Mover:</strong> arraste um bloco para outro dia. No celular, toque no bloco e troque a data.</li>
-          <li><strong>Editar ou adicionar informação:</strong> toque no bloco para abrir. Use o campo de observações para pendências.</li>
-          <li><strong>Nova visita:</strong> botão “+” no dia ou “Nova visita”. <strong>Excluir:</strong> dentro do bloco, com opção de desfazer.</li>
-          <li><strong>Salvar:</strong> não precisa — é automático no seu Google Drive, poucos segundos após cada mudança. O aviso no topo mostra quando foi a última atualização. Vale para celular e computador. Sem internet, fica guardado no aparelho e sobe quando a conexão voltar (ou toque em “Salvar agora”).</li>
-        </ol>
-      </div>
-    </details>
   </div>
 
   <div class="bar">
     <button class="btn primary" id="newBtn">+ Nova visita</button>
+    <button class="btn" id="shotBtn" title="Gerar imagem da agenda para enviar à coordenação">📸 Print da agenda</button>
+    <button class="btn" id="copyBtn" title="Copiar a agenda do mês anterior para este mês">📋 Copiar mês anterior</button>
     <select id="filter" aria-label="Filtrar por cliente"><option value="">Todos os clientes</option></select>
     <span class="grow"></span>
     <button type="button" class="status" id="saveStatus" title="Salvamento automático no Google Drive">☁️ Conectando…</button>
@@ -362,20 +361,20 @@ label.f textarea{min-height:84px;resize:vertical}
           <summary><h2>Horas por cliente</h2><span class="chev" aria-hidden="true">▾</span></summary>
           <div id="clients"></div>
           <button type="button" class="btn sm" id="newClientBtn" style="margin-top:8px;width:100%">+ Novo cliente</button>
-          <button type="button" class="btn sm save" id="carteiraBtn" style="margin-top:6px;width:100%" hidden>↻ Atualizar carteira de clientes</button>
           <p class="small">Horas cumpridas × previstas no mês. Toque no cliente para editar endereço, contrato, CNPJ e observações.</p>
         </details>
         <details class="panel pfold" open>
           <summary><h2>Legenda</h2><span class="chev" aria-hidden="true">▾</span></summary>
           <div class="legend">
-            <span><i style="background:var(--p1)"></i>Itaim Bibi</span>
-            <span><i style="background:var(--p2)"></i>Campo Belo / Brooklin / Vila Clementino</span>
-            <span><i style="background:var(--p3)"></i>Bom Retiro / Vila Madalena</span>
-            <span><i style="background:var(--p4)"></i>Guarulhos (Vila São João)</span>
-            <span><i style="background:var(--p5)"></i>Jardim Dom Bosco</span>
-            <span><span class="tag done">Realizada</span>entra no “a receber pelo que já foi realizado”</span>
+            <span><i style="background:var(--p1)"></i>Itaim</span>
+            <span><i style="background:var(--p2)"></i>Campo Belo / Brooklin / V. Clementino</span>
+            <span><i style="background:var(--p3)"></i>Bom Retiro / V. Madalena</span>
+            <span><i style="background:var(--p4)"></i>Terça fixa: Bom Retiro → Guarulhos</span>
+            <span><i style="background:var(--p5)"></i>Outros / novos clientes</span>
             <span><span class="tag remt">💻 Remota</span> visita remota — sem custo de transporte</span>
-            <span><span class="tag diff">prev. 4 h</span>horas cumpridas diferentes do previsto</span>
+            <span><span class="tag pend">Pendente</span>de setembro</span>
+            <span><span class="tag jess compName">acompanhante</span>visita de passagem</span>
+            <span><span class="tag diff">prev</span>horas cumpridas diferentes do previsto</span>
             <span><span class="hstep demo">−</span><span class="hstep demo">+</span>ajuste rápido de horas no bloco</span>
           </div>
         </details>
@@ -408,6 +407,10 @@ label.f textarea{min-height:84px;resize:vertical}
       <label class="f">Situação<select id="v-st"><option value="ag">Agendada</option><option value="ok">Realizada</option><option value="cn">Cancelada</option></select></label>
       <label class="f">Modalidade<select id="v-mode"><option value="pre">Presencial</option><option value="rem">Remota (sem transporte)</option></select></label>
     </div>
+    <div class="checks">
+      <label><input type="checkbox" id="v-pend"> Pendente de setembro</label>
+      <label><input type="checkbox" id="v-jess"> Passagem com <span class="compName">acompanhante</span></label>
+    </div>
     <label class="f">Observações e pendências<textarea id="v-note" placeholder="Ex.: levar planilha de temperatura; cobrar laudo de potabilidade; retorno sobre controle de pragas"></textarea></label>
     <div class="info" id="v-info"></div>
     <div class="acts">
@@ -430,9 +433,10 @@ label.f textarea{min-height:84px;resize:vertical}
     </div>
     <div class="grid2">
       <label class="f">Horas previstas no mês<input type="number" id="c-hours" min="0" step="0.5"></label>
-      <label class="f">Polo<select id="c-polo"><option value="1">Itaim Bibi</option><option value="2">Campo Belo / Brooklin / Vila Clementino</option><option value="3">Bom Retiro / Vila Madalena</option><option value="4">Guarulhos (Vila São João)</option><option value="5">Jardim Dom Bosco</option></select></label>
+      <label class="f">Polo<select id="c-polo"><option value="1">Itaim</option><option value="2">Campo Belo / Brooklin</option><option value="3">Bom Retiro / V. Madalena</option><option value="4">Terça fixa (Guarulhos)</option><option value="5">Outros / novos clientes</option></select></label>
     </div>
-    <label class="f">Contrato e frequência de visita<input id="c-contract"></label>
+    <label class="f">Contrato<input id="c-contract"></label>
+    <div class="f"><span>Fechado em (a cópia de mês evita esses dias)</span><div class="closedrow"><label><input type="checkbox" class="c-cl" value="1"> seg</label><label><input type="checkbox" class="c-cl" value="2"> ter</label><label><input type="checkbox" class="c-cl" value="3"> qua</label><label><input type="checkbox" class="c-cl" value="4"> qui</label><label><input type="checkbox" class="c-cl" value="5"> sex</label><label><input type="checkbox" class="c-cl" value="6"> sáb</label></div></div>
     <div class="grid2">
       <label class="f">Tarifa extra intermunicipal por trecho (R$)<input type="number" id="c-extra" min="0" step="0.01" placeholder="0,00"></label>
       <span></span>
@@ -475,6 +479,28 @@ label.f textarea{min-height:84px;resize:vertical}
     <label class="f">Chave<input id="cn-key" type="password" required autocomplete="off"></label>
     <div class="info" id="cn-msg"></div>
     <div class="acts"><button type="button" class="btn danger" id="cn-off">Desconectar este aparelho</button><span class="grow"></span><button type="button" class="btn" id="cn-cancel">Fechar</button><button type="submit" class="btn primary">Conectar</button></div>
+  </form>
+</dialog>
+<dialog id="dshot">
+  <form class="dlg wide" id="fshot" method="dialog">
+    <h3>📸 Print da agenda</h3>
+    <div class="sub">Imagem com dia, horário e cliente — sem valores. Para enviar à coordenação.</div>
+    <div class="grid3">
+      <label class="f">Período<select id="sh-per"><option value="7">Semana</option><option value="14">Quinzena</option><option value="m">Mês inteiro</option></select></label>
+      <label class="f">A partir de<input type="date" id="sh-from"></label>
+      <label class="f">Mostrar<select id="sh-addr"><option value="0">Sem endereço</option><option value="1">Com endereço</option></select></label>
+    </div>
+    <div class="shotwrap"><img id="sh-img" alt="Prévia do print da agenda"></div>
+    <div class="acts"><span class="grow"></span><button type="button" class="btn" id="sh-cancel">Fechar</button><button type="button" class="btn" id="sh-dl">⬇️ Baixar</button><button type="submit" class="btn primary" id="sh-share">📤 Compartilhar</button></div>
+  </form>
+</dialog>
+<dialog id="dcopy">
+  <form class="dlg wide" id="fcopy" method="dialog">
+    <h3 id="cp-title">Copiar agenda</h3>
+    <div class="sub">Cada dia é copiado com os mesmos clientes agrupados e os mesmos horários, no mesmo número do dia. Se cair em sábado, domingo, feriado, dia que já tem visita ou dia em que o cliente fecha, o grupo vai para o dia livre mais próximo. As visitas entram como <b>Agendada</b>, com as horas previstas. <b>Nenhuma visita já existente é alterada.</b></div>
+    <div id="cp-list"></div>
+    <div class="info" id="cp-sum"></div>
+    <div class="acts"><span class="grow"></span><button type="button" class="btn" id="cp-cancel">Cancelar</button><button type="submit" class="btn primary" id="cp-go">Aplicar</button></div>
   </form>
 </dialog>
 <dialog id="dd">
@@ -581,7 +607,7 @@ label.f textarea{min-height:84px;resize:vertical}
     const cy=new Date().getFullYear(); const years=new Set([cy-1,cy,cy+1,cy+2,y]); S.visits.forEach(v=>years.add(Number(v.d.slice(0,4))));
     $('#selMonth').innerHTML=MONTHS.map((n,i)=>'<option value="'+i+'"'+(i===m?' selected':'')+'>'+n.charAt(0).toUpperCase()+n.slice(1)+'</option>').join('');
     $('#selYear').innerHTML=[...years].sort().map(a=>'<option'+(a===y?' selected':'')+'>'+a+'</option>').join('');
-    renderCalendar(y,m); renderClients(); refreshCarteiraBtn(); renderFinance(); renderNF(); renderStatus(); document.querySelectorAll('.compName').forEach(el=>el.textContent=S.companion||'acompanhante'); const hl=$('#homeLines'); if(hl) hl.textContent=S.homeLines||'—'; const ha=$('#homeAddr'); if(ha && document.activeElement!==ha) ha.value=S.home||'';
+    renderCalendar(y,m); renderClients(); renderFinance(); renderNF(); renderStatus(); updCopyBtn(); document.querySelectorAll('.compName').forEach(el=>el.textContent=S.companion||'acompanhante'); const hl=$('#homeLines'); if(hl) hl.textContent=S.homeLines||'—'; const ha=$('#homeAddr'); if(ha && document.activeElement!==ha) ha.value=S.home||'';
   }
 
   function renderCalendar(y,m){
@@ -596,9 +622,9 @@ label.f textarea{min-height:84px;resize:vertical}
         const d=iso(dt); const inMonth=dt.getMonth()===m; if(inMonth) any=true;
         const list=(byDay[d]||[]).slice().sort((a,b)=>a.t.localeCompare(b.t));
         const cell=document.createElement('div');
-        cell.className='day'+(inMonth?'':' out')+(S.holidays[d]?' hol':'')+(d===todayIso?' today':'')+(list.length?'':' empty');
+        cell.className='day'+(inMonth?'':' out')+(holName(d)?' hol':'')+(d===todayIso?' today':'')+(list.length?'':' empty');
         cell.dataset.date=d;
-        const hol=S.holidays[d]; const hasField=list.some(v=>v.st!=='cn');
+        const hol=holName(d); const hasField=list.some(v=>v.st!=='cn');
         cell.innerHTML='<div class="dhead"><span class="dnum">'+dt.getDate()+'</span><span class="dlabel"><span class="dmobile">'+DOW[dt.getDay()]+(hol?' • ':'')+'</span>'+(hol?esc(hol):'')+'</span>'+(readOnly?'':'<button class="add" data-add="'+d+'" aria-label="Nova visita em '+dt.getDate()+'">+</button>')+'</div>';
         list.forEach(v=>cell.appendChild(cardEl(v)));
         if(hasField && inMonth){ const c=dayCostOf(d); const b=document.createElement('button'); b.className='cost'; b.dataset.cost=d; b.textContent='🚇 ida e volta '+brl(c); b.title='Ajustar transporte do dia'; cell.appendChild(b); }
@@ -621,6 +647,8 @@ label.f textarea{min-height:84px;resize:vertical}
     b.title=c.name+' • '+v.t+'–'+endOf(v)+' • '+hfmt(v.h)+(v.hp!==undefined?' (previsto '+hfmt(v.hp)+')':'')+(v.note?'\n'+v.note:'');
     let tags='';
     if(v.hp!==undefined && v.hp!==v.h) tags+='<span class="tag diff">prev. '+hfmt(v.hp)+'</span>';
+    if(v.pend) tags+='<span class="tag pend">Pendente</span>';
+    if(v.jess) tags+='<span class="tag jess">'+esc(S.companion||'acompanhante')+'</span>';
     if(v.st==='ok') tags+='<span class="tag done">Realizada</span>';
     if(v.mode==='rem') tags+='<span class="tag remt">💻 Remota</span>';
     if(v.st==='cn') tags+='<span class="tag canc">Cancelada</span>';
@@ -643,7 +671,7 @@ label.f textarea{min-height:84px;resize:vertical}
 
   function renderClients(){
     const mv=monthVisits().filter(v=>v.st!=='cn'); const box=$('#clients'); box.innerHTML='';
-    S.clients.forEach(c=>{
+    S.clients.slice().sort((a,b)=>a.name.localeCompare(b.name,'pt-BR',{sensitivity:'base'})).forEach(c=>{
       const h=mv.filter(v=>v.c===c.id).reduce((a,v)=>a+Number(v.h),0); const ex=expected(c);
       if(!ex && !h) return;
       const ok=Math.abs(h-ex)<0.01; const pct=ex?Math.min(100,h/ex*100):100;
@@ -740,19 +768,19 @@ label.f textarea{min-height:84px;resize:vertical}
   function openVisit(v,dateForNew){
     editing = v ? v.id : null;
     $('#v-c').innerHTML=S.clients.map(c=>'<option value="'+c.id+'">'+esc(c.name)+'</option>').join('');
-    const base=v||{c:S.clients[0].id,d:dateForNew||iso(new Date(S.view.year,S.view.month,1)),t:'09:00',h:2,st:'ag',note:''};
+    const base=v||{c:S.clients[0].id,d:dateForNew||iso(new Date(S.view.year,S.view.month,1)),t:'09:00',h:2,pend:false,jess:false,st:'ag',note:''};
     $('#v-c').value=base.c; $('#v-d').value=base.d; $('#v-t').value=base.t; $('#v-h').value=base.h; $('#v-hp').value=base.hp??base.h; $('#v-te').value=fromMin(toMin(base.t)+Number(base.h)*60);
     $('#v-from').value=v&&v.from?v.from:''; $('#v-from').placeholder=v?'automático: '+fromOf(v):'automático: casa ou cliente anterior';
     $('#v-fare').value=v&&v.fareM?v.fare:''; $('#v-fare').placeholder=v?'automático: '+brl(autoFare(v)):'automático';
     $('#v-farehint').textContent=v?('Volta para casa no dia: '+brl(backOf(v.d))+' • total do dia '+brl(dayCostOf(v.d))):'O custo é calculado ao salvar.';
-    $('#v-st').value=base.st; $('#v-mode').value=base.mode==='rem'?'rem':'pre'; $('#v-note').value=base.note||'';
+    $('#v-st').value=base.st; $('#v-mode').value=base.mode==='rem'?'rem':'pre'; $('#v-pend').checked=!!base.pend; $('#v-jess').checked=!!base.jess; $('#v-note').value=base.note||'';
     $('#dv-title').textContent=v?'Editar visita':'Nova visita'; $('#v-del').hidden=!v; $('#v-ok').textContent=v?'Aplicar':'Adicionar';
     updateInfo(); $('#dv').showModal();
   }
   function updateRoute(){ const c=client($('#v-c').value); if(!c) return; const v=editing?S.visits.find(x=>x.id===editing):null;
     const from=$('#v-from').value.trim()||(v&&v.c===c.id&&v.d===$('#v-d').value?fromOf(v):S.home);
     $('#v-to').textContent='De: '+from+'  →  Para: '+c.addr; $('#v-route').href=routeUrl(from,c.addr); }
-  function updateInfo(){ updateRoute(); const c=client($('#v-c').value); $('#v-info').innerHTML=c&&c.route?'🚌 '+esc(c.route):''; $('#v-info').hidden=!(c&&c.route); $('#dv-sub').textContent=c?c.name:''; }
+  function updateInfo(){ updateRoute(); const c=client($('#v-c').value); $('#v-info').innerHTML=c?'<b>'+esc(c.addr)+'</b><br>'+esc(c.contract)+(c.route?'<br>🚌 '+esc(c.route):'')+(c.info?'<br>'+esc(c.info):''):''; $('#dv-sub').textContent=c?c.name:''; }
 
   $('#v-c').addEventListener('change',updateInfo);
   $('#v-from').addEventListener('input',updateRoute); $('#v-d').addEventListener('change',updateRoute);
@@ -765,12 +793,11 @@ label.f textarea{min-height:84px;resize:vertical}
   $('#fv').addEventListener('submit',e=>{
     e.preventDefault();
     const hpv=Number($('#v-hp').value);
-    const data={c:$('#v-c').value,d:$('#v-d').value,t:$('#v-t').value,h:r2(Number($('#v-h').value)),st:$('#v-st').value,note:$('#v-note').value.trim()};
+    const data={c:$('#v-c').value,d:$('#v-d').value,t:$('#v-t').value,h:r2(Number($('#v-h').value)),st:$('#v-st').value,pend:$('#v-pend').checked,jess:$('#v-jess').checked,note:$('#v-note').value.trim()};
     if(!data.d||!data.t||!(data.h>=0)||!(hpv>0)) return;
     let target;
     if(editing){ target=S.visits.find(x=>x.id===editing); Object.assign(target,data); }
     else { S.seq=(S.seq||0)+1; target=Object.assign({id:'v'+S.seq},data); S.visits.push(target); }
-    delete target.pend; delete target.jess;
     if(hpv!==data.h) target.hp=hpv; else delete target.hp;
     if($('#v-mode').value==='rem') target.mode='rem'; else delete target.mode;
     const fromV=$('#v-from').value.trim(); if(fromV) target.from=fromV; else delete target.from;
@@ -785,9 +812,11 @@ label.f textarea{min-height:84px;resize:vertical}
     toast('Visita excluída.',()=>{S.visits.splice(i,0,rem); markDirty();});
   });
 
+  const closedSel=()=>[...document.querySelectorAll('.c-cl')].filter(x=>x.checked).map(x=>Number(x.value));
   function openClient(c){
     if(!c){ c={id:null,name:'',addr:'',extraFare:0,route:'',razao:'',cnpj:'',hours:0,polo:5,contract:'',info:''}; }
     editingClient=c.id; $('#dc-title').textContent=c.id?c.name:'Novo cliente';
+    document.querySelectorAll('.c-cl').forEach(x=>x.checked=(c.closed||[]).includes(Number(x.value)));
     $('#c-name').value=c.name; $('#c-addr').value=c.addr; $('#c-extra').value=c.extraFare||''; $('#c-route').value=c.route||''; $('#c-razao').value=c.razao||''; $('#c-cnpj').value=c.cnpj||''; $('#c-hours').value=c.id?expected(c):''; $('#c-polo').value=c.polo; $('#c-contract').value=c.contract; $('#c-info').value=c.info||'';
     $('#dc').showModal();
   }
@@ -797,12 +826,12 @@ label.f textarea{min-height:84px;resize:vertical}
     e.preventDefault();
     if(!editingClient){
       const name=$('#c-name').value.trim(); if(!name) return;
-      const nc={id:'c'+Date.now().toString(36),name,addr:$('#c-addr').value.trim(),extraFare:r2(Number($('#c-extra').value)||0),route:$('#c-route').value.trim(),razao:$('#c-razao').value.trim(),cnpj:$('#c-cnpj').value.trim(),hours:Number($('#c-hours').value)||0,polo:Number($('#c-polo').value)||5,contract:$('#c-contract').value.trim(),info:$('#c-info').value.trim()};
+      const nc={id:'c'+Date.now().toString(36),closed:closedSel(),name,addr:$('#c-addr').value.trim(),extraFare:r2(Number($('#c-extra').value)||0),route:$('#c-route').value.trim(),razao:$('#c-razao').value.trim(),cnpj:$('#c-cnpj').value.trim(),hours:Number($('#c-hours').value)||0,polo:Number($('#c-polo').value)||5,contract:$('#c-contract').value.trim(),info:$('#c-info').value.trim()};
       const mk=monthKey(); if(S.expected[mk]) S.expected[mk][nc.id]=nc.hours;
       S.clients.push(nc); $('#dc').close(); markDirty(); toast('Cliente '+name+' cadastrado. Agora toque no + do dia para marcar a visita.'); return;
     }
     const c=client(editingClient); if(!c) return;
-    Object.assign(c,{name:$('#c-name').value.trim()||c.name,addr:$('#c-addr').value.trim(),extraFare:r2(Number($('#c-extra').value)||0),route:$('#c-route').value.trim(),razao:$('#c-razao').value.trim(),cnpj:$('#c-cnpj').value.trim(),hours:(S.expected[monthKey()]&&S.expected[monthKey()][c.id]!==undefined)?c.hours:(Number($('#c-hours').value)||0),polo:Number($('#c-polo').value),contract:$('#c-contract').value.trim(),info:$('#c-info').value.trim()});
+    Object.assign(c,{closed:closedSel(),name:$('#c-name').value.trim()||c.name,addr:$('#c-addr').value.trim(),extraFare:r2(Number($('#c-extra').value)||0),route:$('#c-route').value.trim(),razao:$('#c-razao').value.trim(),cnpj:$('#c-cnpj').value.trim(),hours:(S.expected[monthKey()]&&S.expected[monthKey()][c.id]!==undefined)?c.hours:(Number($('#c-hours').value)||0),polo:Number($('#c-polo').value),contract:$('#c-contract').value.trim(),info:$('#c-info').value.trim()});
     const mk=monthKey(); if(S.expected[mk]&&S.expected[mk][c.id]!==undefined){ S.expected[mk][c.id]=Number($('#c-hours').value)||0; }
     $('#dc').close(); markDirty(); toast('Cliente atualizado.');
   });
@@ -856,51 +885,6 @@ label.f textarea{min-height:84px;resize:vertical}
   $('#todayBtn').addEventListener('click',()=>{const t=new Date(); S.view={year:t.getFullYear(),month:t.getMonth()}; render();});
   // Financeiro sempre começa recolhido; dicas lembram a escolha deste aparelho
   $('#finFold').addEventListener('toggle',()=>{const o=$('#finFold').open; document.body.classList.toggle('show-fin',o); $('#finHint').textContent=o?'visível • toque para ocultar':'oculto • toque para ver';});
-  try{ if(localStorage.getItem('agenda-help-open')==='1') $('#helpFold').open=true; }catch(e){}
-  $('#helpFold').addEventListener('toggle',()=>{try{localStorage.setItem('agenda-help-open',$('#helpFold').open?'1':'0')}catch(e){}});
-
-
-  // ===== Atualização única da carteira (29/09/2026) =====
-  const CARTEIRA_V='2026-09-29';
-  const norm = t => String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
-  const CARTEIRA=[
-    {m:n=>/paul/.test(n)&&/bom ?retiro/.test(n), name:"Paul's Boutique Bom Retiro", addr:'R. Silva Pinto, 450 - Bom Retiro - São Paulo - SP, 01126-010', hours:6, polo:3, contract:'6 h/mês • 2 visitas quinzenais de 3 h'},
-    {m:n=>/paul/.test(n)&&/itaim/.test(n), name:"Paul's Boutique Itaim Bibi", addr:'R. Dr. Renato Paes de Barros, 167 - Itaim Bibi - São Paulo - SP, 04530-000', hours:6, polo:1, contract:'6 h/mês • 2 visitas quinzenais de 3 h'},
-    {m:n=>/paul/.test(n)&&/madalena/.test(n), name:"Paul's Boutique Vila Madalena", addr:'R. Girassol, 185 - Vila Madalena - São Paulo - SP, 05433-000', hours:6, polo:3, contract:'6 h/mês • 2 visitas quinzenais de 3 h'},
-    {m:n=>/constantin/.test(n), name:'Constantinus Grill', addr:'Rua Constantino de Sousa, 956 - Campo Belo - São Paulo - SP, 04605-003', hours:3, polo:2, contract:'3 h/mês • 1 visita mensal de 3 h'},
-    {m:n=>/(pergol|pegol)/.test(n)&&/campo ?belo/.test(n), name:'La Pergoletta Campo Belo', addr:'R. Antônio de Macedo Soares, 1132 - Campo Belo - São Paulo - SP, 04607-001', hours:2, polo:2, contract:'2 h/mês • 1 visita mensal de 2 h', oct:3, octInfo:'Out/2026: 2 visitas — a mensal (2 h) + 1 pendente de setembro (1 h).'},
-    {m:n=>/(pergol|pegol)/.test(n)&&/itaim/.test(n), name:'La Pergoletta Itaim', addr:'Rua Doutor Renato Paes de Barros, 199 - Itaim Bibi - São Paulo - SP, 04530-000', hours:4, polo:1, contract:'4 h/mês • 2 visitas quinzenais de 2 h'},
-    {m:n=>/(pergol|pegol)/.test(n)&&/brooklin/.test(n), name:'La Pergoletta Brooklin', addr:'R. Califórnia, 713 - Brooklin - São Paulo - SP, 04566-061', hours:4, polo:2, contract:'4 h/mês • 2 visitas quinzenais de 2 h'},
-    {m:n=>/falaf/.test(n), name:'Falafull', addr:'R. Santa Generosa, 27 - Vila Clementino - São Paulo - SP, 04042-010', hours:8, polo:2, contract:'8 h/mês • 2 visitas de 2 h + 1 visita quinzenal de 4 h', octInfo:'Pendência de setembro (4 h) realizada em 01/10 — conta em setembro.'},
-    {m:n=>/\bmun\b/.test(n), name:'Mun Alimentos', addr:'R. Afonso Pena, 322 - Bom Retiro - São Paulo - SP, 01124-000', hours:12, polo:3, contract:'12 h/mês • 3 visitas semanais de 4 h'},
-    {m:n=>/reserva/.test(n), name:'Reserva Mundi', addr:'R. Cavadas, 1166 - Vila Sao João, Guarulhos - SP, 07044-000', hours:16, polo:4, contract:'16 h/mês • 4 visitas semanais de 4 h', extra:7.75, oct:26.11, octInfo:'Out/2026: 16 h + 10,11 h pendentes de setembro em home office (análise de riscos de Food Fraud; locais para estudo de análise sensorial). Plano de ação aguarda o retorno da auditoria IFS.'},
-    {m:n=>/(marmita|gigi)/.test(n), name:'Marmita Fit da Gigi', addr:'R. Bento Branco de Andrade Filho, 254 - Jardim Dom Bosco, São Paulo - SP, 04757-000', hours:8, polo:5, contract:'8 h/mês • 2 visitas quinzenais de 4 h', oct:12, octInfo:'Out/2026: 3 visitas semanais de 4 h (inclui a pendência de setembro).'}
-  ];
-  function planCarteira(){
-    const used=new Set(); return CARTEIRA.map(k=>{ const c=S.clients.find(x=>!used.has(x.id)&&k.m(norm(x.name))); if(c) used.add(c.id); return {k,c}; });
-  }
-  function refreshCarteiraBtn(){ const b=$('#carteiraBtn'); if(b) b.hidden = readOnly || S.carteiraV===CARTEIRA_V; }
-  $('#carteiraBtn').addEventListener('click',()=>{
-    const plan=planCarteira(); const keep=new Set(plan.filter(p=>p.c).map(p=>p.c.id));
-    const others=S.clients.filter(c=>!keep.has(c.id)&&c.hours>0);
-    const msg='Atualizar a carteira com os 11 clientes atuais?\n\n'+
-      plan.map(p=>(p.c?'✓ atualiza “'+p.c.name+'”':'+ cria')+' → '+p.k.name).join('\n')+
-      (others.length?'\n\nSaem do painel (horas previstas = 0; histórico preservado):\n'+others.map(c=>'– '+c.name).join('\n'):'')+
-      '\n\nSetembro/2026 fica com as horas previstas atuais. Outubro/2026 recebe as horas com pendências.';
-    if(!confirm(msg)) return;
-    const sep='2026-09', oct='2026-10';
-    if(!S.expected[sep]){ S.expected[sep]={}; S.clients.forEach(c=>{ S.expected[sep][c.id]=c.hours||0; }); }
-    S.expected[oct]=S.expected[oct]||{};
-    plan.forEach(({k,c})=>{
-      if(!c){ c={id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),route:'',razao:'',cnpj:'',extraFare:0,info:''}; S.clients.push(c); if(S.expected[sep][c.id]===undefined) S.expected[sep][c.id]=0; }
-      Object.assign(c,{name:k.name,addr:k.addr,hours:k.hours,polo:k.polo,contract:k.contract});
-      if(k.extra && !(Number(c.extraFare)>0)) c.extraFare=k.extra;
-      if(k.octInfo) c.info=k.octInfo+(c.info&&c.info.indexOf(k.octInfo)<0?'\n'+c.info:'');
-      if(k.oct!==undefined) S.expected[oct][c.id]=k.oct; else delete S.expected[oct][c.id];
-    });
-    others.forEach(c=>{ c.hours=0; if(S.expected[oct]) delete S.expected[oct][c.id]; });
-    S.carteiraV=CARTEIRA_V; markDirty(); refreshCarteiraBtn(); toast('Carteira atualizada: 11 clientes.');
-  });
 
   // Aviso com desfazer
   let tmr=null;
@@ -913,16 +897,136 @@ label.f textarea{min-height:84px;resize:vertical}
 
   // Exportar planilha (CSV)
   $('#csvBtn').addEventListener('click',async()=>{
-    const rows=[['Data','Dia','Entrada','Saída','Horas cumpridas','Cliente','Endereço','Situação','Modalidade','Valor (R$)','Observações']];
+    const rows=[['Data','Dia','Entrada','Saída','Horas cumpridas','Cliente','Endereço','Situação','Modalidade','Pendente set.','Passagem '+(S.companion||'acompanhante'),'Valor (R$)','Observações']];
     const st={ag:'Agendada',ok:'Realizada',cn:'Cancelada'};
     monthVisits().slice().sort((a,b)=>(a.d+a.t).localeCompare(b.d+b.t)).forEach(v=>{const c=client(v.c)||{}; const dt=new Date(v.d+'T12:00:00');
-      rows.push([v.d.split('-').reverse().join('/'),DOW[dt.getDay()],v.t,endOf(v),String(v.h).replace('.',','),c.name,c.addr,st[v.st],v.mode==='rem'?'Remota':'Presencial',v.st==='cn'?'0':(v.h*S.rate).toFixed(2).replace('.',','),v.note||'']);});
-    const t=totals(); const nn=x=>x.toFixed(2).replace('.',','); const blank=['','','','','','','','','']; rows.push([]); rows.push(['Resumo','','','','','','','','Realizado','Agendado','Total']);
-    rows.push(['Honorários'].concat(blank.slice(0,7)).concat([nn(t.ok.rev),nn(t.ag.rev),nn(t.rev)])); rows.push(['Transporte (reembolso Tria)'].concat(blank.slice(0,7)).concat([nn(t.ok.cost),nn(t.ag.cost),nn(t.cost)])); rows.push(['Total a receber'].concat(blank.slice(0,7)).concat([nn(t.ok.net),nn(t.ag.net),nn(t.net)]));
+      rows.push([v.d.split('-').reverse().join('/'),DOW[dt.getDay()],v.t,endOf(v),String(v.h).replace('.',','),c.name,c.addr,st[v.st],v.mode==='rem'?'Remota':'Presencial',v.pend?'Sim':'Não',v.jess?'Sim':'Não',v.st==='cn'?'0':(v.h*S.rate).toFixed(2).replace('.',','),v.note||'']);});
+    const t=totals(); const nn=x=>x.toFixed(2).replace('.',','); const blank=['','','','','','','','','','','']; rows.push([]); rows.push(['Resumo','','','','','','','','','Realizado','Agendado','Total']);
+    rows.push(['Honorários'].concat(blank.slice(0,8)).concat([nn(t.ok.rev),nn(t.ag.rev),nn(t.rev)])); rows.push(['Transporte (reembolso Tria)'].concat(blank.slice(0,8)).concat([nn(t.ok.cost),nn(t.ag.cost),nn(t.cost)])); rows.push(['Total a receber'].concat(blank.slice(0,8)).concat([nn(t.ok.net),nn(t.ag.net),nn(t.net)]));
     const csv='\ufeff'+rows.map(r=>r.map(x=>'"'+String(x??'').replace(/"/g,'""')+'"').join(';')).join('\r\n');
     const name='agenda-'+monthKey()+'.csv';
     exportDrive(name,csv);
   });
+
+  // ===== Feriados automáticos (nacionais + estado e capital de SP) =====
+  const AUTO_HOL={};
+  (function(){ const add=(y,m,d,n)=>{ AUTO_HOL[y+'-'+pad(m)+'-'+pad(d)]=n; };
+    for(let y=2026;y<=2030;y++){
+      const a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),hh=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-hh-k)%7,m=Math.floor((a+11*hh+22*l)/451),mo=Math.floor((hh+l-7*m+114)/31),da=((hh+l-7*m+114)%31)+1;
+      const easter=new Date(y,mo-1,da); const rel=(n,name)=>{ const x=new Date(easter); x.setDate(x.getDate()+n); add(x.getFullYear(),x.getMonth()+1,x.getDate(),name); };
+      add(y,1,1,'Confraternização Universal'); add(y,1,25,'Aniversário de São Paulo'); rel(-2,'Sexta-feira Santa'); add(y,4,21,'Tiradentes'); add(y,5,1,'Dia do Trabalho'); rel(60,'Corpus Christi');
+      add(y,7,9,'Revolução Constitucionalista'); add(y,9,7,'Independência'); add(y,10,12,'Nossa Senhora Aparecida'); add(y,11,2,'Finados'); add(y,11,15,'Proclamação da República'); add(y,11,20,'Consciência Negra'); add(y,12,25,'Natal');
+    } })();
+  const holName = d => (S.holidays&&S.holidays[d]) || AUTO_HOL[d] || '';
+  const DOWS=['dom','seg','ter','qua','qui','sex','sáb'];
+  const isoOf = dt => dt.getFullYear()+'-'+pad(dt.getMonth()+1)+'-'+pad(dt.getDate());
+  const brDate = d => d.split('-').reverse().slice(0,2).join('/');
+
+  // ===== Copiar agenda do mês anterior =====
+  let copyPlan=null;
+  function realMonthKey(){ const n=new Date(); return n.getFullYear()+'-'+pad(n.getMonth()+1); }
+  function prevOfView(){ const y=S.view.year, m=S.view.month; return m===0?{year:y-1,month:11}:{year:y,month:m-1}; }
+  function planCopy(){
+    const y=S.view.year, m=S.view.month, pv=prevOfView(); const srcKey=pv.year+'-'+pad(pv.month+1);
+    const src=S.visits.filter(v=>v.d.startsWith(srcKey)&&v.st!=='cn');
+    const groups={}; src.forEach(v=>{ (groups[v.d]=groups[v.d]||[]).push(v); });
+    const dim=new Date(y,m+1,0).getDate(); const tk=monthKey();
+    const occupied=new Set(S.visits.filter(v=>v.d.startsWith(tk)&&v.st!=='cn').map(v=>v.d));
+    const why=(d,vs)=>{ const dt=new Date(d+'T12:00:00'), dw=dt.getDay(); if(dw===0) return 'domingo'; if(dw===6) return 'sábado'; if(holName(d)) return 'feriado ('+holName(d)+')'; if(occupied.has(d)) return 'dia já tem visita';
+      const cl=vs.map(v=>client(v.c)).find(c=>c&&(c.closed||[]).includes(dw)); if(cl) return cl.name+' fecha '+DOWS[dw]; return ''; };
+    const plan=[];
+    Object.keys(groups).sort().forEach(sd=>{
+      const day=Math.min(Number(sd.slice(8)),dim); const nat=y+'-'+pad(m+1)+'-'+pad(day); const vs=groups[sd]; let to=null, reason=why(nat,vs);
+      if(!reason) to=nat; else { for(let off=1;off<=10&&!to;off++){ for(const s of [off,-off]){ const dd=day+s; if(dd<1||dd>dim) continue; const c=y+'-'+pad(m+1)+'-'+pad(dd); if(!why(c,vs)){ to=c; break; } } } }
+      if(to) occupied.add(to);
+      plan.push({from:sd,to,nat,reason,visits:groups[sd].slice().sort((a,b)=>a.t.localeCompare(b.t))});
+    });
+    return plan;
+  }
+  function openCopy(){
+    if(monthKey()<=realMonthKey()){ toast('Para proteger as horas já lançadas, só é possível copiar para meses futuros. Avance para o próximo mês.'); return; }
+    const pv=prevOfView(); copyPlan=planCopy();
+    $('#cp-title').textContent='Copiar '+MONTHS[pv.month]+' → '+MONTHS[S.view.month]+'/'+S.view.year;
+    const dw=d=>DOWS[new Date(d+'T12:00:00').getDay()];
+    $('#cp-list').innerHTML=copyPlan.map(g=>{ const names=g.visits.map(v=>{ const c=client(v.c); return esc(c?c.name:'?')+' '+v.t+'–'+fromMin(toMin(v.t)+Number(v.hp??v.h)*60)+(v.mode==='rem'?' 💻':''); }).join(' • ');
+      if(!g.to) return '<div class="cpl no"><b>'+brDate(g.from)+' ('+dw(g.from)+')</b> → não coube no mês<small>'+names+'</small></div>';
+      const moved=g.to!==g.nat; return '<div class="cpl'+(moved?' mv':'')+'"><b>'+brDate(g.from)+' ('+dw(g.from)+') → '+brDate(g.to)+' ('+dw(g.to)+')</b>'+(moved?' ↪ '+esc(g.reason):'')+'<small>'+names+'</small></div>'; }).join('')||'<p class="small">O mês anterior não tem visitas para copiar.</p>';
+    const nv=copyPlan.filter(g=>g.to).reduce((a,g)=>a+g.visits.length,0), nd=copyPlan.filter(g=>g.to).length, miss=copyPlan.filter(g=>!g.to).length, mv=copyPlan.filter(g=>g.to&&g.to!==g.nat).length;
+    $('#cp-sum').innerHTML='<b>'+nv+' visitas em '+nd+' dias</b>'+(mv?'<br>↪ '+mv+' dia(s) mudaram de data — confira os destacados.':'')+(miss?'<br>⚠️ '+miss+' dia(s) não couberam e ficam de fora.':'')+'<br>Depois é só ajustar no calendário (clientes novos, imprevistos).';
+    $('#cp-go').disabled=!nv; $('#dcopy').showModal();
+  }
+  $('#copyBtn').addEventListener('click',openCopy);
+  $('#cp-cancel').addEventListener('click',()=>$('#dcopy').close());
+  $('#fcopy').addEventListener('submit',e=>{ e.preventDefault(); if(!copyPlan) return; const added=[];
+    copyPlan.filter(g=>g.to).forEach(g=>g.visits.forEach(v=>{ S.seq=(S.seq||0)+1; const hp=Number(v.hp??v.h);
+      const nv={id:'v'+S.seq,c:v.c,d:g.to,t:v.t,h:hp,st:'ag',pend:false,jess:!!v.jess,note:''}; if(v.mode==='rem') nv.mode='rem';
+      S.visits.push(nv); added.push(nv.id); }));
+    $('#dcopy').close(); markDirty();
+    toast(added.length+' visitas copiadas para '+MONTHS[S.view.month]+'.',()=>{ S.visits=S.visits.filter(v=>!added.includes(v.id)); markDirty(); toast('Cópia desfeita.'); });
+  });
+  function updCopyBtn(){ const b=$('#copyBtn'); if(!b) return; const pv=prevOfView(); b.textContent='📋 Copiar '+MONTHS[pv.month].toLowerCase(); const fut=monthKey()>realMonthKey(); b.disabled=!fut||readOnly; b.title=fut?'Copiar a agenda de '+MONTHS[pv.month]+' para '+MONTHS[S.view.month]:'Disponível ao abrir um mês futuro'; }
+
+  // ===== Print da agenda =====
+  let shotCanvas=null;
+  function mondayOf(dt){ const x=new Date(dt); const dw=x.getDay(); x.setDate(x.getDate()-(dw===0?6:dw-1)); return x; }
+  function openShot(){
+    const now=new Date(); const cur=monthKey()===realMonthKey();
+    $('#sh-per').value='7'; $('#sh-from').value=isoOf(cur?mondayOf(now):mondayOf(new Date(S.view.year,S.view.month,1)));
+    $('#dshot').showModal(); drawShot();
+  }
+  function shotRange(){ const per=$('#sh-per').value; let a,b;
+    if(per==='m'){ a=new Date(S.view.year,S.view.month,1); b=new Date(S.view.year,S.view.month+1,0); }
+    else { a=new Date(($('#sh-from').value||isoOf(new Date()))+'T12:00:00'); b=new Date(a); b.setDate(a.getDate()+Number(per)-1); }
+    return [isoOf(a),isoOf(b)]; }
+  function wrapText(ctx,text,maxW){ const words=String(text).split(' '); const lines=[]; let cur='';
+    words.forEach(w=>{ const t=cur?cur+' '+w:w; if(ctx.measureText(t).width>maxW && cur){ lines.push(cur); cur=w; } else cur=t; }); if(cur) lines.push(cur); return lines; }
+  function drawShot(){
+    const [a,b]=shotRange(); const withAddr=$('#sh-addr').value==='1'; const per=$('#sh-per').value;
+    const days=[]; for(let d=new Date(a+'T12:00:00'); isoOf(d)<=b; d.setDate(d.getDate()+1)){ const iso=isoOf(d); if(d.getDay()===0) continue;
+      const vs=S.visits.filter(v=>v.d===iso&&v.st!=='cn').sort((x,y)=>x.t.localeCompare(y.t)); if(per==='m'&&!vs.length) continue; days.push({iso,dw:d.getDay(),vs}); }
+    const W=1080, P=56, cs=getComputedStyle(document.documentElement); const pc=n=>(cs.getPropertyValue('--p'+n)||'#555').trim();
+    const cv=document.createElement('canvas'); const ctx=cv.getContext('2d'); const F='system-ui,-apple-system,Segoe UI,Roboto,sans-serif';
+    const ops=[]; let y=P;
+    const T=(txt,x,yy,font,color)=>ops.push({k:'t',txt,x,y:yy,font,color});
+    T('Agenda de visitas',P,y+44,'700 44px '+F,'#14202b'); y+=62;
+    const tot=days.reduce((s,d)=>s+d.vs.length,0), hrs=days.reduce((s,d)=>s+d.vs.reduce((q,v)=>q+Number(v.h),0),0);
+    T(brDate(a)+' a '+brDate(b)+'/'+b.slice(0,4)+'  •  '+tot+' visita'+(tot===1?'':'s')+'  •  '+hfmt(hrs),P,y+30,'500 28px '+F,'#44515c'); y+=44;
+    const who=[(S.company&&S.company.resp)||'', (S.company&&S.company.name)||''].filter(Boolean).join(' — ');
+    if(who){ T(who,P,y+26,'400 24px '+F,'#5f6b75'); y+=40; }
+    y+=14; ops.push({k:'line',y}); y+=26;
+    ctx.font='700 30px '+F;
+    days.forEach(dd=>{
+      const hol=holName(dd.iso); const head=DOWS[dd.dw].charAt(0).toUpperCase()+DOWS[dd.dw].slice(1)+', '+brDate(dd.iso)+(hol?'  —  '+hol:'');
+      T(head,P,y+30,'700 30px '+F,hol?'#b3261e':'#14202b'); y+=48;
+      if(!dd.vs.length){ T('Sem visitas',P+24,y+24,'italic 400 24px '+F,'#8a949c'); y+=44; }
+      dd.vs.forEach(v=>{ const c=client(v.c)||{name:'?',addr:'',polo:1}; const top=y;
+        const t1=v.t+'–'+endOf(v)+'   '+c.name; ctx.font='600 28px '+F; const l1=wrapText(ctx,t1,W-2*P-40);
+        const info=[v.mode==='rem'?'Remota':'Presencial', v.st==='ok'?'Realizada':'Agendada'].concat(v.jess?['com '+(S.companion||'acompanhante')]:[]).join(' • ');
+        ctx.font='400 23px '+F; const l2=wrapText(ctx,info+(withAddr&&c.addr&&v.mode!=='rem'?'  •  '+c.addr:''),W-2*P-40);
+        l1.forEach(s=>{ T(s,P+28,y+30,'600 28px '+F,'#14202b'); y+=38; });
+        l2.forEach(s=>{ T(s,P+28,y+26,'400 23px '+F,'#5f6b75'); y+=32; });
+        ops.push({k:'bar',x:P,y:top+6,h:y-top-4,color:pc(c.polo||1)}); y+=14; });
+      y+=16; });
+    if(!days.length){ T('Nenhuma visita no período.',P,y+30,'400 26px '+F,'#5f6b75'); y+=50; }
+    y+=10; ops.push({k:'line',y}); y+=34;
+    T('Gerado em '+new Date().toLocaleString('pt-BR'),P,y,'400 20px '+F,'#8a949c'); y+=P-10;
+    const sc=1; cv.width=W*sc; cv.height=Math.ceil(y)*sc; ctx.scale(sc,sc);
+    ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,W,y);
+    ops.forEach(o=>{ if(o.k==='t'){ ctx.font=o.font; ctx.fillStyle=o.color; ctx.fillText(o.txt,o.x,o.y); }
+      else if(o.k==='line'){ ctx.fillStyle='#dfe4e8'; ctx.fillRect(P,o.y,W-2*P,2); }
+      else if(o.k==='bar'){ ctx.fillStyle=o.color; ctx.fillRect(o.x,o.y,8,o.h); } });
+    shotCanvas=cv; $('#sh-img').src=cv.toDataURL('image/png');
+  }
+  function shotName(){ const [a,b]=shotRange(); return 'agenda-visitas-'+a+'-a-'+b+'.png'; }
+  function downloadShot(){ if(!shotCanvas) return; const a=document.createElement('a'); a.href=shotCanvas.toDataURL('image/png'); a.download=shotName(); document.body.appendChild(a); a.click(); a.remove(); }
+  ['sh-per','sh-from','sh-addr'].forEach(id=>$('#'+id).addEventListener('change',drawShot));
+  $('#shotBtn').addEventListener('click',openShot);
+  $('#sh-cancel').addEventListener('click',()=>$('#dshot').close());
+  $('#sh-dl').addEventListener('click',downloadShot);
+  $('#fshot').addEventListener('submit',e=>{ e.preventDefault(); if(!shotCanvas) return;
+    shotCanvas.toBlob(async blob=>{ const file=new File([blob],shotName(),{type:'image/png'});
+      try{ if(navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file],title:'Agenda de visitas'}); return; } }catch(err){ if(err&&err.name==='AbortError') return; }
+      downloadShot(); toast('Imagem baixada. Envie pelo WhatsApp ou e-mail.'); },'image/png'); });
 
   // ===== Relatório de reembolso (Tria) =====
   const FARELBL={'9.38':'integração ônibus + metrô/trem (Bilhete Único)','5.4':'metrô/trem','5.3':'ônibus SPTrans'};
