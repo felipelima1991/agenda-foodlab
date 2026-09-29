@@ -142,6 +142,11 @@ body.side-off .sidetoggle{writing-mode:vertical-rl;padding:14px 8px;min-height:1
 .cpl small{display:block;color:var(--ink-2)}
 .closedrow{display:flex;gap:12px;flex-wrap:wrap;font-size:13.5px;padding:4px 0}
 .closedrow label{display:flex;gap:4px;align-items:center}
+.legpolos{display:contents}
+.legpolos button{display:flex;gap:8px;align-items:center;background:none;border:0;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer}
+.legpolos i{width:12px;height:12px;border-radius:3px;display:inline-block;flex:none}
+.card .doc{text-decoration:none;margin-left:4px;font-size:13px}
+.docbtn{display:inline-flex;gap:6px;align-items:center;margin-top:8px;text-decoration:none;color:var(--ink);font-weight:600}
 /* Abas recolhíveis */
 .folds{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;align-items:start}
 .folds{grid-template-columns:1fr 1fr}
@@ -366,14 +371,8 @@ label.f textarea{min-height:84px;resize:vertical}
         <details class="panel pfold" open>
           <summary><h2>Legenda</h2><span class="chev" aria-hidden="true">▾</span></summary>
           <div class="legend">
-            <span><i style="background:var(--p1)"></i>Itaim</span>
-            <span><i style="background:var(--p2)"></i>Campo Belo / Brooklin / V. Clementino</span>
-            <span><i style="background:var(--p3)"></i>Bom Retiro / V. Madalena</span>
-            <span><i style="background:var(--p4)"></i>Terça fixa: Bom Retiro → Guarulhos</span>
-            <span><i style="background:var(--p5)"></i>Outros / novos clientes</span>
+            <div id="legendPolos" class="legpolos"></div>
             <span><span class="tag remt">💻 Remota</span> visita remota — sem custo de transporte</span>
-            <span><span class="tag pend">Pendente</span>de setembro</span>
-            <span><span class="tag jess compName">acompanhante</span>visita de passagem</span>
             <span><span class="tag diff">prev</span>horas cumpridas diferentes do previsto</span>
             <span><span class="hstep demo">−</span><span class="hstep demo">+</span>ajuste rápido de horas no bloco</span>
           </div>
@@ -433,9 +432,10 @@ label.f textarea{min-height:84px;resize:vertical}
     </div>
     <div class="grid2">
       <label class="f">Horas previstas no mês<input type="number" id="c-hours" min="0" step="0.5"></label>
-      <label class="f">Polo<select id="c-polo"><option value="1">Itaim</option><option value="2">Campo Belo / Brooklin</option><option value="3">Bom Retiro / V. Madalena</option><option value="4">Terça fixa (Guarulhos)</option><option value="5">Outros / novos clientes</option></select></label>
+      <label class="f">Bairro / região (cor na agenda)<select id="c-polo"></select></label>
     </div>
     <label class="f">Contrato<input id="c-contract"></label>
+    <label class="f">Nome no arquivo de direcionamento (opcional)<input id="c-dockey" placeholder="automático pelo nome do cliente — ex.: Pauls, La_Pergoletta"></label>
     <div class="f"><span>Fechado em (a cópia de mês evita esses dias)</span><div class="closedrow"><label><input type="checkbox" class="c-cl" value="1"> seg</label><label><input type="checkbox" class="c-cl" value="2"> ter</label><label><input type="checkbox" class="c-cl" value="3"> qua</label><label><input type="checkbox" class="c-cl" value="4"> qui</label><label><input type="checkbox" class="c-cl" value="5"> sex</label><label><input type="checkbox" class="c-cl" value="6"> sáb</label></div></div>
     <div class="grid2">
       <label class="f">Tarifa extra intermunicipal por trecho (R$)<input type="number" id="c-extra" min="0" step="0.01" placeholder="0,00"></label>
@@ -573,6 +573,7 @@ label.f textarea{min-height:84px;resize:vertical}
   const fromMin = m => { m=((Math.round(m)%1440)+1440)%1440; return pad(Math.floor(m/60))+':'+pad(m%60); };
   const endOf = v => fromMin(toMin(v.t)+Number(v.h)*60);
   function migrate(){
+    ensurePolos();
     S.home=S.home||HOME_DEFAULT; S.backM=S.backM||{};
     if(S.fareModel!==2){
       Object.keys(S.dayCost||{}).forEach(d=>{ const l=dayList(d); if(!l.length) return; const fares=l.reduce((a,v)=>a+autoFare(v,l),0); const b=r2(S.dayCost[d]-fares); if(b>=0 && Math.abs(b-autoBack(d))>0.005) S.backM[d]=b; });
@@ -586,7 +587,24 @@ label.f textarea{min-height:84px;resize:vertical}
   const pad = n => String(n).padStart(2,'0');
   const iso = dt => dt.getFullYear()+'-'+pad(dt.getMonth()+1)+'-'+pad(dt.getDate());
   const client = id => S.clients.find(c=>c.id===id);
-  const poloVar = p => 'var(--p'+p+')';
+  const POLO_PALETTE=['#8a3d62','#0e7c86','#7a8b1d','#c0392b','#3949ab','#d4a017','#6d4c41','#00897b','#ad1457','#546e7a','#9e9d24','#5e35b1'];
+  const POLO_DEFAULT={1:{name:'Itaim',color:'#1d5a8a'},2:{name:'Campo Belo / Brooklin / V. Clementino',color:'#2a7a6b'},3:{name:'Bom Retiro / V. Madalena',color:'#6a4c93'},4:{name:'Terça fixa: Bom Retiro → Guarulhos',color:'#b5651d'}};
+  function bairroOf(addr){ if(!addr) return ''; const parts=addr.replace(/\b\d{5}-?\d{3}\b/g,'').split(/\s[–—-]\s|,/).map(x=>x.trim()).filter(x=>x && !/^\d+[a-z]?$/i.test(x) && !/^(r\.|rua|av\.|avenida|al\.|alameda|tv\.|travessa|estr\.|estrada|pç\.|praça)\s/i.test(x) && !/^(sp|são paulo|sao paulo)$/i.test(x));
+    return parts.length?parts[parts.length-1]:''; }
+  function ensurePolos(){
+    if(!Array.isArray(S.polos)){ S.polos=Object.keys(POLO_DEFAULT).map(k=>({id:Number(k),name:POLO_DEFAULT[k].name,color:POLO_DEFAULT[k].color})); }
+    const used=[...new Set(S.clients.map(c=>Number(c.polo)||1))];
+    used.forEach(id=>{ if(S.polos.some(p=>p.id===id)) return; const c=S.clients.find(x=>(Number(x.polo)||1)===id);
+      const color=POLO_PALETTE.find(col=>!S.polos.some(p=>p.color===col))||POLO_PALETTE[id%POLO_PALETTE.length];
+      S.polos.push({id,name:bairroOf(c&&c.addr)||(c?c.name:'Região '+id),color}); });
+  }
+  const poloOf = id => (S.polos||[]).find(p=>p.id===Number(id));
+  const poloVar = id => { const p=poloOf(id); return p?p.color:'#8a949c'; };
+  const polosSorted = () => (S.polos||[]).slice().sort((a,b)=>a.name.localeCompare(b.name,'pt-BR',{sensitivity:'base'}));
+  function newPolo(name){ const id=Math.max(0,...S.polos.map(p=>p.id))+1; const color=POLO_PALETTE.find(col=>!S.polos.some(p=>p.color===col))||POLO_PALETTE[id%POLO_PALETTE.length]; const p={id,name,color}; S.polos.push(p); return p; }
+  function renderLegend(){ const box=$('#legendPolos'); if(!box) return;
+    box.innerHTML=polosSorted().map(p=>'<button type="button" data-polo="'+p.id+'" title="Toque para renomear"><i style="background:'+p.color+'"></i>'+esc(p.name)+'</button>').join(''); }
+  function fillPoloSelect(sel){ const s=$('#c-polo'); s.innerHTML=polosSorted().map(p=>'<option value="'+p.id+'">'+esc(p.name)+'</option>').join('')+'<option value="new">➕ Novo bairro / região…</option>'; if(sel!=null) s.value=String(sel); }
   const esc = s => String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const hfmt = h => (Math.round(h*100)/100).toLocaleString('pt-BR',{maximumFractionDigits:2})+' h';
 
@@ -607,7 +625,7 @@ label.f textarea{min-height:84px;resize:vertical}
     const cy=new Date().getFullYear(); const years=new Set([cy-1,cy,cy+1,cy+2,y]); S.visits.forEach(v=>years.add(Number(v.d.slice(0,4))));
     $('#selMonth').innerHTML=MONTHS.map((n,i)=>'<option value="'+i+'"'+(i===m?' selected':'')+'>'+n.charAt(0).toUpperCase()+n.slice(1)+'</option>').join('');
     $('#selYear').innerHTML=[...years].sort().map(a=>'<option'+(a===y?' selected':'')+'>'+a+'</option>').join('');
-    renderCalendar(y,m); renderClients(); renderFinance(); renderNF(); renderStatus(); updCopyBtn(); document.querySelectorAll('.compName').forEach(el=>el.textContent=S.companion||'acompanhante'); const hl=$('#homeLines'); if(hl) hl.textContent=S.homeLines||'—'; const ha=$('#homeAddr'); if(ha && document.activeElement!==ha) ha.value=S.home||'';
+    renderCalendar(y,m); renderClients(); renderFinance(); renderNF(); renderStatus(); updCopyBtn(); renderLegend(); document.querySelectorAll('.compName').forEach(el=>el.textContent=S.companion||'acompanhante'); const hl=$('#homeLines'); if(hl) hl.textContent=S.homeLines||'—'; const ha=$('#homeAddr'); if(ha && document.activeElement!==ha) ha.value=S.home||'';
   }
 
   function renderCalendar(y,m){
@@ -654,7 +672,8 @@ label.f textarea{min-height:84px;resize:vertical}
     if(v.st==='cn') tags+='<span class="tag canc">Cancelada</span>';
     if(v.note) tags+='<span class="tag note" title="'+esc(v.note)+'">📝 obs.</span>';
     const hs=readOnly?'<small>'+hfmt(v.h)+'</small>':'<span class="hs"><button type="button" class="hstep" data-step="-0.5" aria-label="Menos meia hora">−</button><b>'+hfmt(v.h)+'</b><button type="button" class="hstep" data-step="0.5" aria-label="Mais meia hora">+</button></span>';
-    b.innerHTML='<span class="t">'+esc(v.t)+'–'+endOf(v)+hs+'</span><span class="n">'+esc(c.name)+'</span>'+(tags?'<span class="tags">'+tags+'</span>':'');
+    const dr=dirFor(c,v.d); const docA=dr?'<a class="doc" href="'+esc(dr.f.url)+'" target="_blank" rel="noopener" title="Direcionamento '+esc(monthName(dr.f))+(dr.exact?'':' (ainda não há o do mês da visita)')+'">📄</a>':'';
+    b.innerHTML='<span class="t">'+esc(v.t)+'–'+endOf(v)+hs+'</span><span class="n">'+esc(c.name)+docA+'</span>'+(tags?'<span class="tags">'+tags+'</span>':'');
     b.addEventListener('dragstart',e=>{e.dataTransfer.setData('text/plain',v.id); e.dataTransfer.effectAllowed='move'; b.classList.add('dragging')});
     b.addEventListener('dragend',()=>b.classList.remove('dragging'));
     return b;
@@ -780,10 +799,13 @@ label.f textarea{min-height:84px;resize:vertical}
   function updateRoute(){ const c=client($('#v-c').value); if(!c) return; const v=editing?S.visits.find(x=>x.id===editing):null;
     const from=$('#v-from').value.trim()||(v&&v.c===c.id&&v.d===$('#v-d').value?fromOf(v):S.home);
     $('#v-to').textContent='De: '+from+'  →  Para: '+c.addr; $('#v-route').href=routeUrl(from,c.addr); }
-  function updateInfo(){ updateRoute(); const c=client($('#v-c').value); $('#v-info').innerHTML=c?'<b>'+esc(c.addr)+'</b><br>'+esc(c.contract)+(c.route?'<br>🚌 '+esc(c.route):'')+(c.info?'<br>'+esc(c.info):''):''; $('#dv-sub').textContent=c?c.name:''; }
+  function updateInfo(){ updateRoute(); const c=client($('#v-c').value); const vd=$('#v-d').value||(S.view.year+'-'+pad(S.view.month+1)+'-01'); const dr=c?dirFor(c,vd):null;
+    const vm=MONTHS[Number(vd.slice(5,7))-1].toLowerCase();
+    const docH=c?(dr?'<br><a class="docbtn btn sm" href="'+esc(dr.f.url)+'" target="_blank" rel="noopener">📄 Abrir direcionamento de '+esc(monthName(dr.f))+'</a>'+(dr.exact?'':'<br><small>O direcionamento de '+vm+' ainda não está na pasta — mostrando o mais recente.</small>'):'<br><small>📄 Nenhum direcionamento deste cliente na pasta do Drive ainda.</small>'):'';
+    $('#v-info').innerHTML=c?'<b>'+esc(c.addr)+'</b><br>'+esc(c.contract)+(c.route?'<br>🚌 '+esc(c.route):'')+(c.info?'<br>'+esc(c.info):'')+docH:''; $('#dv-sub').textContent=c?c.name:''; }
 
   $('#v-c').addEventListener('change',updateInfo);
-  $('#v-from').addEventListener('input',updateRoute); $('#v-d').addEventListener('change',updateRoute);
+  $('#v-from').addEventListener('input',updateRoute); $('#v-d').addEventListener('change',()=>{ updateRoute(); updateInfo(); });
   const syncEnd=()=>{ const t=$('#v-t').value, hh=Number($('#v-h').value); if(t && hh>=0) $('#v-te').value=fromMin(toMin(t)+hh*60); };
   $('#v-t').addEventListener('input',syncEnd); $('#v-h').addEventListener('input',syncEnd);
   $('#v-te').addEventListener('input',()=>{ const t=$('#v-t').value, te=$('#v-te').value; if(!t||!te) return; let diff=(toMin(te)-toMin(t))/60; if(diff<0) diff+=24; $('#v-h').value=Math.round(diff*100)/100; });
@@ -814,24 +836,30 @@ label.f textarea{min-height:84px;resize:vertical}
 
   const closedSel=()=>[...document.querySelectorAll('.c-cl')].filter(x=>x.checked).map(x=>Number(x.value));
   function openClient(c){
-    if(!c){ c={id:null,name:'',addr:'',extraFare:0,route:'',razao:'',cnpj:'',hours:0,polo:5,contract:'',info:''}; }
+    if(!c){ c={id:null,name:'',addr:'',extraFare:0,route:'',razao:'',cnpj:'',hours:0,polo:null,contract:'',info:''}; }
     editingClient=c.id; $('#dc-title').textContent=c.id?c.name:'Novo cliente';
     document.querySelectorAll('.c-cl').forEach(x=>x.checked=(c.closed||[]).includes(Number(x.value)));
+    fillPoloSelect(c.polo!=null?c.polo:(polosSorted()[0]||{}).id); $('#c-dockey').value=c.docKey||'';
     $('#c-name').value=c.name; $('#c-addr').value=c.addr; $('#c-extra').value=c.extraFare||''; $('#c-route').value=c.route||''; $('#c-razao').value=c.razao||''; $('#c-cnpj').value=c.cnpj||''; $('#c-hours').value=c.id?expected(c):''; $('#c-polo').value=c.polo; $('#c-contract').value=c.contract; $('#c-info').value=c.info||'';
     $('#dc').showModal();
   }
   $('#c-cancel').addEventListener('click',()=>$('#dc').close());
   $('#newClientBtn').addEventListener('click',()=>openClient(null));
+  $('#c-polo').addEventListener('change',e=>{ if(e.target.value!=='new') return; const sug=bairroOf($('#c-addr').value);
+    const name=(prompt('Nome do novo bairro / região:',sug)||'').trim(); if(!name){ fillPoloSelect((polosSorted()[0]||{}).id); return; }
+    const p=newPolo(name); fillPoloSelect(p.id); markDirty(); });
+  $('#legendPolos').addEventListener('click',e=>{ const b=e.target.closest('[data-polo]'); if(!b||readOnly) return; const p=poloOf(b.dataset.polo); if(!p) return;
+    const name=(prompt('Nome do bairro / região:',p.name)||'').trim(); if(name && name!==p.name){ p.name=name; markDirty(); toast('Região renomeada.'); } });
   $('#fc').addEventListener('submit',e=>{
     e.preventDefault();
     if(!editingClient){
       const name=$('#c-name').value.trim(); if(!name) return;
-      const nc={id:'c'+Date.now().toString(36),closed:closedSel(),name,addr:$('#c-addr').value.trim(),extraFare:r2(Number($('#c-extra').value)||0),route:$('#c-route').value.trim(),razao:$('#c-razao').value.trim(),cnpj:$('#c-cnpj').value.trim(),hours:Number($('#c-hours').value)||0,polo:Number($('#c-polo').value)||5,contract:$('#c-contract').value.trim(),info:$('#c-info').value.trim()};
+      const nc={id:'c'+Date.now().toString(36),closed:closedSel(),docKey:$('#c-dockey').value.trim(),name,addr:$('#c-addr').value.trim(),extraFare:r2(Number($('#c-extra').value)||0),route:$('#c-route').value.trim(),razao:$('#c-razao').value.trim(),cnpj:$('#c-cnpj').value.trim(),hours:Number($('#c-hours').value)||0,polo:Number($('#c-polo').value)||(polosSorted()[0]||{id:1}).id,contract:$('#c-contract').value.trim(),info:$('#c-info').value.trim()};
       const mk=monthKey(); if(S.expected[mk]) S.expected[mk][nc.id]=nc.hours;
       S.clients.push(nc); $('#dc').close(); markDirty(); toast('Cliente '+name+' cadastrado. Agora toque no + do dia para marcar a visita.'); return;
     }
     const c=client(editingClient); if(!c) return;
-    Object.assign(c,{closed:closedSel(),name:$('#c-name').value.trim()||c.name,addr:$('#c-addr').value.trim(),extraFare:r2(Number($('#c-extra').value)||0),route:$('#c-route').value.trim(),razao:$('#c-razao').value.trim(),cnpj:$('#c-cnpj').value.trim(),hours:(S.expected[monthKey()]&&S.expected[monthKey()][c.id]!==undefined)?c.hours:(Number($('#c-hours').value)||0),polo:Number($('#c-polo').value),contract:$('#c-contract').value.trim(),info:$('#c-info').value.trim()});
+    Object.assign(c,{closed:closedSel(),docKey:$('#c-dockey').value.trim(),name:$('#c-name').value.trim()||c.name,addr:$('#c-addr').value.trim(),extraFare:r2(Number($('#c-extra').value)||0),route:$('#c-route').value.trim(),razao:$('#c-razao').value.trim(),cnpj:$('#c-cnpj').value.trim(),hours:(S.expected[monthKey()]&&S.expected[monthKey()][c.id]!==undefined)?c.hours:(Number($('#c-hours').value)||0),polo:Number($('#c-polo').value),contract:$('#c-contract').value.trim(),info:$('#c-info').value.trim()});
     const mk=monthKey(); if(S.expected[mk]&&S.expected[mk][c.id]!==undefined){ S.expected[mk][c.id]=Number($('#c-hours').value)||0; }
     $('#dc').close(); markDirty(); toast('Cliente atualizado.');
   });
@@ -854,6 +882,7 @@ label.f textarea{min-height:84px;resize:vertical}
   // Delegação de cliques
   document.addEventListener('click',e=>{
     const st=e.target.closest('.hstep:not(.demo)'); if(st){ e.stopPropagation(); if(!readOnly){ const cd=st.closest('.card'); stepHours(cd.dataset.id,Number(st.dataset.step)); } return; }
+    if(e.target.closest('a.doc')){ e.stopPropagation(); return; }
     const card=e.target.closest('.card'); if(card){ if(readOnly) return; openVisit(S.visits.find(v=>v.id===card.dataset.id)); return; }
     const add=e.target.closest('[data-add]'); if(add){ openVisit(null,add.dataset.add); return; }
     const cost=e.target.closest('[data-cost]'); if(cost){ if(!readOnly) openDay(cost.dataset.cost); return; }
@@ -1005,7 +1034,7 @@ label.f textarea{min-height:84px;resize:vertical}
         ctx.font='400 23px '+F; const l2=wrapText(ctx,info+(withAddr&&c.addr&&v.mode!=='rem'?'  •  '+c.addr:''),W-2*P-40);
         l1.forEach(s=>{ T(s,P+28,y+30,'600 28px '+F,'#14202b'); y+=38; });
         l2.forEach(s=>{ T(s,P+28,y+26,'400 23px '+F,'#5f6b75'); y+=32; });
-        ops.push({k:'bar',x:P,y:top+6,h:y-top-4,color:pc(c.polo||1)}); y+=14; });
+        ops.push({k:'bar',x:P,y:top+6,h:y-top-4,color:poloVar(c.polo||1)}); y+=14; });
       y+=16; });
     if(!days.length){ T('Nenhuma visita no período.',P,y+30,'400 26px '+F,'#5f6b75'); y+=50; }
     y+=10; ops.push({k:'line',y}); y+=34;
@@ -1027,6 +1056,27 @@ label.f textarea{min-height:84px;resize:vertical}
     shotCanvas.toBlob(async blob=>{ const file=new File([blob],shotName(),{type:'image/png'});
       try{ if(navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file],title:'Agenda de visitas'}); return; } }catch(err){ if(err&&err.name==='AbortError') return; }
       downloadShot(); toast('Imagem baixada. Envie pelo WhatsApp ou e-mail.'); },'image/png'); });
+
+  // ===== Direcionamentos da coordenação (PDFs no Drive) =====
+  let DIRS=[], dirsAt=0;
+  const MES=['janeiro','fevereiro','marco','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  const MES3=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+  const normK = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
+  function parseDir(f){ const base=f.name.replace(/\.pdf$/i,''); const low=base.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+    const cut=low.search(/direcionamento/); const prefix=normK(cut>0?base.slice(0,cut):base.split(/[_\-\s]/)[0]);
+    const toks=low.split(/[^a-z0-9]+/).filter(Boolean); let mo=-1, yr=null;
+    toks.forEach((t,i)=>{ if(mo<0){ let k=MES.indexOf(t); if(k<0) k=MES3.indexOf(t); if(k>=0){ mo=k; const nx=toks[i+1]; if(nx&&/^\d{2}(\d{2})?$/.test(nx)) yr=nx.length===2?2000+Number(nx):Number(nx); } } });
+    if(mo<0){ const m2=low.match(/(20\d{2})[-_.](\d{2})/); if(m2){ yr=Number(m2[1]); mo=Number(m2[2])-1; } }
+    return Object.assign({},f,{prefix,mo,yr}); }
+  function loadDirs(force){ if(!GS) return Promise.resolve(); if(!force && Date.now()-dirsAt<5*60000) return Promise.resolve();
+    return call('listDirectives').then(list=>{ DIRS=(list||[]).map(parseDir); dirsAt=Date.now(); render(); }).catch(()=>{}); }
+  function dirFor(c,d){ if(!c||!DIRS.length) return null; const ck=normK(c.docKey||c.name); const ck2=normK(c.docKey||'');
+    const mine=DIRS.filter(f=>f.prefix && (ck2 ? f.prefix===ck2 || ck.startsWith(f.prefix) : ck.startsWith(f.prefix)));
+    if(!mine.length) return null; const y=Number(d.slice(0,4)), m=Number(d.slice(5,7))-1, want=y*12+m;
+    const score=f=>f.mo<0?-1:(f.yr||y)*12+f.mo;
+    const exact=mine.filter(f=>score(f)===want).sort((a,b)=>(b.updated||'').localeCompare(a.updated||''))[0]; if(exact) return {f:exact,exact:true};
+    const prev=mine.filter(f=>score(f)>=0&&score(f)<want).sort((a,b)=>score(b)-score(a))[0]; return prev?{f:prev,exact:false}:null; }
+  const monthName = f => f.mo>=0 ? MONTHS[f.mo].toLowerCase()+(f.yr?'/'+f.yr:'') : '';
 
   // ===== Relatório de reembolso (Tria) =====
   const FARELBL={'9.38':'integração ônibus + metrô/trem (Bilhete Único)','5.4':'metrô/trem','5.3':'ônibus SPTrans'};
@@ -1144,7 +1194,7 @@ label.f textarea{min-height:84px;resize:vertical}
     S.nf=S.nf||{}; S.expected=S.expected||{};
     migrate();
     const now=new Date(); S.view={year:now.getFullYear(),month:now.getMonth()};
-    loaded=true; render(); scrollToday();
+    loaded=true; render(); scrollToday(); loadDirs(true);
     if(dirty){ clearTimeout(saveTimer); saveTimer=setTimeout(()=>save(false),1500); }
     else if(!baseRev && GS && serverOk && S.clients.length){ save(false); } // primeira vez: grava a agenda inicial no Drive
   }
