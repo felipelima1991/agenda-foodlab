@@ -366,6 +366,7 @@ label.f textarea{min-height:84px;resize:vertical}
           <summary><h2>Horas por cliente</h2><span class="chev" aria-hidden="true">▾</span></summary>
           <div id="clients"></div>
           <button type="button" class="btn sm" id="newClientBtn" style="margin-top:8px;width:100%">+ Novo cliente</button>
+          <button type="button" class="btn sm" id="dirFolderBtn" style="margin-top:6px;width:100%">📁 Pasta de direcionamentos</button>
           <p class="small">Horas cumpridas × previstas no mês. Toque no cliente para editar endereço, contrato, CNPJ e observações.</p>
         </details>
         <details class="panel pfold" open>
@@ -405,10 +406,6 @@ label.f textarea{min-height:84px;resize:vertical}
     <div class="grid2">
       <label class="f">Situação<select id="v-st"><option value="ag">Agendada</option><option value="ok">Realizada</option><option value="cn">Cancelada</option></select></label>
       <label class="f">Modalidade<select id="v-mode"><option value="pre">Presencial</option><option value="rem">Remota (sem transporte)</option></select></label>
-    </div>
-    <div class="checks">
-      <label><input type="checkbox" id="v-pend"> Pendente de setembro</label>
-      <label><input type="checkbox" id="v-jess"> Passagem com <span class="compName">acompanhante</span></label>
     </div>
     <label class="f">Observações e pendências<textarea id="v-note" placeholder="Ex.: levar planilha de temperatura; cobrar laudo de potabilidade; retorno sobre controle de pragas"></textarea></label>
     <div class="info" id="v-info"></div>
@@ -478,6 +475,7 @@ label.f textarea{min-height:84px;resize:vertical}
     <label class="f">Link do app da web (Apps Script)<input id="cn-url" type="url" required placeholder="https://script.google.com/macros/s/.../exec"></label>
     <label class="f">Chave<input id="cn-key" type="password" required autocomplete="off"></label>
     <div class="info" id="cn-msg"></div>
+    <div class="small" id="cn-ver"></div>
     <div class="acts"><button type="button" class="btn danger" id="cn-off">Desconectar este aparelho</button><span class="grow"></span><button type="button" class="btn" id="cn-cancel">Fechar</button><button type="submit" class="btn primary">Conectar</button></div>
   </form>
 </dialog>
@@ -572,8 +570,9 @@ label.f textarea{min-height:84px;resize:vertical}
   const toMin = t => { const [a,b]=t.split(':').map(Number); return a*60+b; };
   const fromMin = m => { m=((Math.round(m)%1440)+1440)%1440; return pad(Math.floor(m/60))+':'+pad(m%60); };
   const endOf = v => fromMin(toMin(v.t)+Number(v.h)*60);
+  let migrateChanged=false;
   function migrate(){
-    ensurePolos();
+    ensurePolos(); if(fixTercaFixa()) migrateChanged=true;
     S.home=S.home||HOME_DEFAULT; S.backM=S.backM||{};
     if(S.fareModel!==2){
       Object.keys(S.dayCost||{}).forEach(d=>{ const l=dayList(d); if(!l.length) return; const fares=l.reduce((a,v)=>a+autoFare(v,l),0); const b=r2(S.dayCost[d]-fares); if(b>=0 && Math.abs(b-autoBack(d))>0.005) S.backM[d]=b; });
@@ -598,12 +597,23 @@ label.f textarea{min-height:84px;resize:vertical}
       const color=POLO_PALETTE.find(col=>!S.polos.some(p=>p.color===col))||POLO_PALETTE[id%POLO_PALETTE.length];
       S.polos.push({id,name:bairroOf(c&&c.addr)||(c?c.name:'Região '+id),color}); });
   }
+  // Correção única: o antigo polo "Terça fixa" vira "Guarulhos"; clientes de outros bairros vão para a cor do próprio bairro
+  function fixTercaFixa(){
+    const p4=(S.polos||[]).find(p=>/^ter[cç]a fixa/i.test(p.name)); if(!p4) return false;
+    p4.name='Guarulhos';
+    S.clients.filter(c=>Number(c.polo)===p4.id && !/guarulhos/i.test(c.addr||'')).forEach(c=>{
+      const b=bairroOf(c.addr); const nb=normK(b);
+      let t=nb?(S.polos||[]).find(p=>p.id!==p4.id && normK(p.name).includes(nb)):null;
+      if(!t) t=newPolo(b||c.name); c.polo=t.id; });
+    return true;
+  }
   const poloOf = id => (S.polos||[]).find(p=>p.id===Number(id));
   const poloVar = id => { const p=poloOf(id); return p?p.color:'#8a949c'; };
   const polosSorted = () => (S.polos||[]).slice().sort((a,b)=>a.name.localeCompare(b.name,'pt-BR',{sensitivity:'base'}));
   function newPolo(name){ const id=Math.max(0,...S.polos.map(p=>p.id))+1; const color=POLO_PALETTE.find(col=>!S.polos.some(p=>p.color===col))||POLO_PALETTE[id%POLO_PALETTE.length]; const p={id,name,color}; S.polos.push(p); return p; }
   function renderLegend(){ const box=$('#legendPolos'); if(!box) return;
-    box.innerHTML=polosSorted().map(p=>'<button type="button" data-polo="'+p.id+'" title="Toque para renomear"><i style="background:'+p.color+'"></i>'+esc(p.name)+'</button>').join(''); }
+    const used=new Set(S.clients.map(c=>Number(c.polo)));
+    box.innerHTML=polosSorted().filter(p=>used.has(p.id)).map(p=>'<button type="button" data-polo="'+p.id+'" title="Toque para renomear"><i style="background:'+p.color+'"></i>'+esc(p.name)+'</button>').join(''); }
   function fillPoloSelect(sel){ const s=$('#c-polo'); s.innerHTML=polosSorted().map(p=>'<option value="'+p.id+'">'+esc(p.name)+'</option>').join('')+'<option value="new">➕ Novo bairro / região…</option>'; if(sel!=null) s.value=String(sel); }
   const esc = s => String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const hfmt = h => (Math.round(h*100)/100).toLocaleString('pt-BR',{maximumFractionDigits:2})+' h';
@@ -665,8 +675,6 @@ label.f textarea{min-height:84px;resize:vertical}
     b.title=c.name+' • '+v.t+'–'+endOf(v)+' • '+hfmt(v.h)+(v.hp!==undefined?' (previsto '+hfmt(v.hp)+')':'')+(v.note?'\n'+v.note:'');
     let tags='';
     if(v.hp!==undefined && v.hp!==v.h) tags+='<span class="tag diff">prev. '+hfmt(v.hp)+'</span>';
-    if(v.pend) tags+='<span class="tag pend">Pendente</span>';
-    if(v.jess) tags+='<span class="tag jess">'+esc(S.companion||'acompanhante')+'</span>';
     if(v.st==='ok') tags+='<span class="tag done">Realizada</span>';
     if(v.mode==='rem') tags+='<span class="tag remt">💻 Remota</span>';
     if(v.st==='cn') tags+='<span class="tag canc">Cancelada</span>';
@@ -785,14 +793,15 @@ label.f textarea{min-height:84px;resize:vertical}
   }
 
   function openVisit(v,dateForNew){
+    loadDirs(false).then(()=>{ if($('#dv').open) updateInfo(); });
     editing = v ? v.id : null;
     $('#v-c').innerHTML=S.clients.map(c=>'<option value="'+c.id+'">'+esc(c.name)+'</option>').join('');
-    const base=v||{c:S.clients[0].id,d:dateForNew||iso(new Date(S.view.year,S.view.month,1)),t:'09:00',h:2,pend:false,jess:false,st:'ag',note:''};
+    const base=v||{c:S.clients[0].id,d:dateForNew||iso(new Date(S.view.year,S.view.month,1)),t:'09:00',h:2,st:'ag',note:''};
     $('#v-c').value=base.c; $('#v-d').value=base.d; $('#v-t').value=base.t; $('#v-h').value=base.h; $('#v-hp').value=base.hp??base.h; $('#v-te').value=fromMin(toMin(base.t)+Number(base.h)*60);
     $('#v-from').value=v&&v.from?v.from:''; $('#v-from').placeholder=v?'automático: '+fromOf(v):'automático: casa ou cliente anterior';
     $('#v-fare').value=v&&v.fareM?v.fare:''; $('#v-fare').placeholder=v?'automático: '+brl(autoFare(v)):'automático';
     $('#v-farehint').textContent=v?('Volta para casa no dia: '+brl(backOf(v.d))+' • total do dia '+brl(dayCostOf(v.d))):'O custo é calculado ao salvar.';
-    $('#v-st').value=base.st; $('#v-mode').value=base.mode==='rem'?'rem':'pre'; $('#v-pend').checked=!!base.pend; $('#v-jess').checked=!!base.jess; $('#v-note').value=base.note||'';
+    $('#v-st').value=base.st; $('#v-mode').value=base.mode==='rem'?'rem':'pre'; $('#v-note').value=base.note||'';
     $('#dv-title').textContent=v?'Editar visita':'Nova visita'; $('#v-del').hidden=!v; $('#v-ok').textContent=v?'Aplicar':'Adicionar';
     updateInfo(); $('#dv').showModal();
   }
@@ -801,7 +810,7 @@ label.f textarea{min-height:84px;resize:vertical}
     $('#v-to').textContent='De: '+from+'  →  Para: '+c.addr; $('#v-route').href=routeUrl(from,c.addr); }
   function updateInfo(){ updateRoute(); const c=client($('#v-c').value); const vd=$('#v-d').value||(S.view.year+'-'+pad(S.view.month+1)+'-01'); const dr=c?dirFor(c,vd):null;
     const vm=MONTHS[Number(vd.slice(5,7))-1].toLowerCase();
-    const docH=c?(dr?'<br><a class="docbtn btn sm" href="'+esc(dr.f.url)+'" target="_blank" rel="noopener">📄 Abrir direcionamento de '+esc(monthName(dr.f))+'</a>'+(dr.exact?'':'<br><small>O direcionamento de '+vm+' ainda não está na pasta — mostrando o mais recente.</small>'):'<br><small>📄 Nenhum direcionamento deste cliente na pasta do Drive ainda.</small>'):'';
+    const docH=c?(dr?'<br><a class="docbtn btn sm" href="'+esc(dr.f.url)+'" target="_blank" rel="noopener">📄 Abrir direcionamento de '+esc(monthName(dr.f))+'</a>'+(dr.exact?'':'<br><small>O direcionamento de '+vm+' ainda não está na pasta — mostrando o mais recente.</small>'):(dirsErr?'<br><small style="color:#d93025">⚠️ '+esc(dirsErr)+'</small>':'<br><small>📄 Nenhum direcionamento deste cliente na pasta “Agenda FoodLab - direcionamentos” ainda.</small>')):'';
     $('#v-info').innerHTML=c?'<b>'+esc(c.addr)+'</b><br>'+esc(c.contract)+(c.route?'<br>🚌 '+esc(c.route):'')+(c.info?'<br>'+esc(c.info):'')+docH:''; $('#dv-sub').textContent=c?c.name:''; }
 
   $('#v-c').addEventListener('change',updateInfo);
@@ -815,7 +824,7 @@ label.f textarea{min-height:84px;resize:vertical}
   $('#fv').addEventListener('submit',e=>{
     e.preventDefault();
     const hpv=Number($('#v-hp').value);
-    const data={c:$('#v-c').value,d:$('#v-d').value,t:$('#v-t').value,h:r2(Number($('#v-h').value)),st:$('#v-st').value,pend:$('#v-pend').checked,jess:$('#v-jess').checked,note:$('#v-note').value.trim()};
+    const data={c:$('#v-c').value,d:$('#v-d').value,t:$('#v-t').value,h:r2(Number($('#v-h').value)),st:$('#v-st').value,note:$('#v-note').value.trim()};
     if(!data.d||!data.t||!(data.h>=0)||!(hpv>0)) return;
     let target;
     if(editing){ target=S.visits.find(x=>x.id===editing); Object.assign(target,data); }
@@ -926,10 +935,10 @@ label.f textarea{min-height:84px;resize:vertical}
 
   // Exportar planilha (CSV)
   $('#csvBtn').addEventListener('click',async()=>{
-    const rows=[['Data','Dia','Entrada','Saída','Horas cumpridas','Cliente','Endereço','Situação','Modalidade','Pendente set.','Passagem '+(S.companion||'acompanhante'),'Valor (R$)','Observações']];
+    const rows=[['Data','Dia','Entrada','Saída','Horas cumpridas','Cliente','Endereço','Situação','Modalidade','Valor (R$)','Observações e pendências']];
     const st={ag:'Agendada',ok:'Realizada',cn:'Cancelada'};
     monthVisits().slice().sort((a,b)=>(a.d+a.t).localeCompare(b.d+b.t)).forEach(v=>{const c=client(v.c)||{}; const dt=new Date(v.d+'T12:00:00');
-      rows.push([v.d.split('-').reverse().join('/'),DOW[dt.getDay()],v.t,endOf(v),String(v.h).replace('.',','),c.name,c.addr,st[v.st],v.mode==='rem'?'Remota':'Presencial',v.pend?'Sim':'Não',v.jess?'Sim':'Não',v.st==='cn'?'0':(v.h*S.rate).toFixed(2).replace('.',','),v.note||'']);});
+      rows.push([v.d.split('-').reverse().join('/'),DOW[dt.getDay()],v.t,endOf(v),String(v.h).replace('.',','),c.name,c.addr,st[v.st],v.mode==='rem'?'Remota':'Presencial',v.st==='cn'?'0':(v.h*S.rate).toFixed(2).replace('.',','),v.note||'']);});
     const t=totals(); const nn=x=>x.toFixed(2).replace('.',','); const blank=['','','','','','','','','','','']; rows.push([]); rows.push(['Resumo','','','','','','','','','Realizado','Agendado','Total']);
     rows.push(['Honorários'].concat(blank.slice(0,8)).concat([nn(t.ok.rev),nn(t.ag.rev),nn(t.rev)])); rows.push(['Transporte (reembolso Tria)'].concat(blank.slice(0,8)).concat([nn(t.ok.cost),nn(t.ag.cost),nn(t.cost)])); rows.push(['Total a receber'].concat(blank.slice(0,8)).concat([nn(t.ok.net),nn(t.ag.net),nn(t.net)]));
     const csv='\ufeff'+rows.map(r=>r.map(x=>'"'+String(x??'').replace(/"/g,'""')+'"').join(';')).join('\r\n');
@@ -988,7 +997,7 @@ label.f textarea{min-height:84px;resize:vertical}
   $('#cp-cancel').addEventListener('click',()=>$('#dcopy').close());
   $('#fcopy').addEventListener('submit',e=>{ e.preventDefault(); if(!copyPlan) return; const added=[];
     copyPlan.filter(g=>g.to).forEach(g=>g.visits.forEach(v=>{ S.seq=(S.seq||0)+1; const hp=Number(v.hp??v.h);
-      const nv={id:'v'+S.seq,c:v.c,d:g.to,t:v.t,h:hp,st:'ag',pend:false,jess:!!v.jess,note:''}; if(v.mode==='rem') nv.mode='rem';
+      const nv={id:'v'+S.seq,c:v.c,d:g.to,t:v.t,h:hp,st:'ag',note:''}; if(v.mode==='rem') nv.mode='rem';
       S.visits.push(nv); added.push(nv.id); }));
     $('#dcopy').close(); markDirty();
     toast(added.length+' visitas copiadas para '+MONTHS[S.view.month]+'.',()=>{ S.visits=S.visits.filter(v=>!added.includes(v.id)); markDirty(); toast('Cópia desfeita.'); });
@@ -1030,7 +1039,7 @@ label.f textarea{min-height:84px;resize:vertical}
       if(!dd.vs.length){ T('Sem visitas',P+24,y+24,'italic 400 24px '+F,'#8a949c'); y+=44; }
       dd.vs.forEach(v=>{ const c=client(v.c)||{name:'?',addr:'',polo:1}; const top=y;
         const t1=v.t+'–'+endOf(v)+'   '+c.name; ctx.font='600 28px '+F; const l1=wrapText(ctx,t1,W-2*P-40);
-        const info=[v.mode==='rem'?'Remota':'Presencial', v.st==='ok'?'Realizada':'Agendada'].concat(v.jess?['com '+(S.companion||'acompanhante')]:[]).join(' • ');
+        const info=[v.mode==='rem'?'Remota':'Presencial', v.st==='ok'?'Realizada':'Agendada'].join(' • ');
         ctx.font='400 23px '+F; const l2=wrapText(ctx,info+(withAddr&&c.addr&&v.mode!=='rem'?'  •  '+c.addr:''),W-2*P-40);
         l1.forEach(s=>{ T(s,P+28,y+30,'600 28px '+F,'#14202b'); y+=38; });
         l2.forEach(s=>{ T(s,P+28,y+26,'400 23px '+F,'#5f6b75'); y+=32; });
@@ -1058,6 +1067,8 @@ label.f textarea{min-height:84px;resize:vertical}
       downloadShot(); toast('Imagem baixada. Envie pelo WhatsApp ou e-mail.'); },'image/png'); });
 
   // ===== Direcionamentos da coordenação (PDFs no Drive) =====
+  const APP_VERSION='2026.09.29-c'; let serverVersion=null, dirsErr='';
+  function checkServer(){ if(!GS) return; call('ping').then(r=>{ serverVersion=r&&r.version||'?'; }).catch(()=>{ serverVersion='antigo'; }).finally(()=>{ if(serverVersion==='antigo') toast('O Code.gs do Apps Script está desatualizado: publique uma Nova versão para ativar os direcionamentos.'); }); }
   let DIRS=[], dirsAt=0;
   const MES=['janeiro','fevereiro','marco','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
   const MES3=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
@@ -1069,7 +1080,11 @@ label.f textarea{min-height:84px;resize:vertical}
     if(mo<0){ const m2=low.match(/(20\d{2})[-_.](\d{2})/); if(m2){ yr=Number(m2[1]); mo=Number(m2[2])-1; } }
     return Object.assign({},f,{prefix,mo,yr}); }
   function loadDirs(force){ if(!GS) return Promise.resolve(); if(!force && Date.now()-dirsAt<5*60000) return Promise.resolve();
-    return call('listDirectives').then(list=>{ DIRS=(list||[]).map(parseDir); dirsAt=Date.now(); render(); }).catch(()=>{}); }
+    return call('listDirectives').then(list=>{ DIRS=(list||[]).map(parseDir); dirsAt=Date.now(); dirsErr=''; render(); })
+      .catch(err=>{ dirsErr=/desconhecida/i.test(String(err&&err.message))?'O servidor (Code.gs) ainda não tem a função de direcionamentos — publique uma Nova versão no Apps Script.':'Não foi possível ler a pasta de direcionamentos agora.'; }); }
+  $('#dirFolderBtn').addEventListener('click',()=>{ if(!GS){ openConn(); return; } const w=window.open('about:blank','_blank');
+    call('directiveFolder').then(u=>{ if(w) w.location.href=u; else location.href=u; loadDirs(true); })
+      .catch(err=>{ if(w) w.close(); toast(/desconhecida/i.test(String(err&&err.message))?'Atualize o Code.gs (Nova versão) para criar a pasta.':'Não foi possível abrir a pasta agora.'); }); });
   function dirFor(c,d){ if(!c||!DIRS.length) return null; const ck=normK(c.docKey||c.name); const ck2=normK(c.docKey||'');
     const mine=DIRS.filter(f=>f.prefix && (ck2 ? f.prefix===ck2 || ck.startsWith(f.prefix) : ck.startsWith(f.prefix)));
     if(!mine.length) return null; const y=Number(d.slice(0,4)), m=Number(d.slice(5,7))-1, want=y*12+m;
@@ -1194,14 +1209,15 @@ label.f textarea{min-height:84px;resize:vertical}
     S.nf=S.nf||{}; S.expected=S.expected||{};
     migrate();
     const now=new Date(); S.view={year:now.getFullYear(),month:now.getMonth()};
-    loaded=true; render(); scrollToday(); loadDirs(true);
+    loaded=true; render(); scrollToday(); loadDirs(true); checkServer();
+    if(migrateChanged && GS && serverOk){ migrateChanged=false; markDirty(); }
     if(dirty){ clearTimeout(saveTimer); saveTimer=setTimeout(()=>save(false),1500); }
     else if(!baseRev && GS && serverOk && S.clients.length){ save(false); } // primeira vez: grava a agenda inicial no Drive
   }
 
   function scrollToday(){ const el=document.querySelector('.day.today'); if(el) setTimeout(()=>el.scrollIntoView({block:'center',behavior:'smooth'}),150); }
   $('#todayBtn').addEventListener('click',()=>setTimeout(scrollToday,0));
-  function openConn(){ $('#cn-url').value=API?API.url:''; $('#cn-key').value=API?API.key:''; $('#cn-msg').textContent=API?'Conectado.':'Ainda não conectado.'; $('#dconn').showModal(); }
+  function openConn(){ $('#cn-url').value=API?API.url:''; $('#cn-key').value=API?API.key:''; $('#cn-msg').textContent=API?'Conectado.':'Ainda não conectado.'; $('#cn-ver').textContent='Versão do app: '+APP_VERSION+' • Servidor: '+(serverVersion||'—'); $('#dconn').showModal(); }
   $('#connBtn').addEventListener('click',openConn);
   $('#cn-cancel').addEventListener('click',()=>$('#dconn').close());
   $('#cn-off').addEventListener('click',()=>{ if(!confirm('Apagar a conexão e os dados guardados neste aparelho? Os dados do Drive não são afetados.')) return;
