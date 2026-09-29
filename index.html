@@ -362,19 +362,19 @@ label.f textarea{min-height:84px;resize:vertical}
           <summary><h2>Horas por cliente</h2><span class="chev" aria-hidden="true">▾</span></summary>
           <div id="clients"></div>
           <button type="button" class="btn sm" id="newClientBtn" style="margin-top:8px;width:100%">+ Novo cliente</button>
+          <button type="button" class="btn sm save" id="carteiraBtn" style="margin-top:6px;width:100%" hidden>↻ Atualizar carteira de clientes</button>
           <p class="small">Horas cumpridas × previstas no mês. Toque no cliente para editar endereço, contrato, CNPJ e observações.</p>
         </details>
         <details class="panel pfold" open>
           <summary><h2>Legenda</h2><span class="chev" aria-hidden="true">▾</span></summary>
           <div class="legend">
-            <span><i style="background:var(--p1)"></i>Itaim</span>
-            <span><i style="background:var(--p2)"></i>Campo Belo / Brooklin / V. Clementino</span>
-            <span><i style="background:var(--p3)"></i>Bom Retiro / V. Madalena</span>
-            <span><i style="background:var(--p4)"></i>Terça fixa: Bom Retiro → Guarulhos</span>
-            <span><i style="background:var(--p5)"></i>Outros / novos clientes</span>
+            <span><i style="background:var(--p1)"></i>Itaim Bibi</span>
+            <span><i style="background:var(--p2)"></i>Campo Belo / Brooklin / Vila Clementino</span>
+            <span><i style="background:var(--p3)"></i>Bom Retiro / Vila Madalena</span>
+            <span><i style="background:var(--p4)"></i>Guarulhos (Vila São João)</span>
+            <span><i style="background:var(--p5)"></i>Jardim Dom Bosco</span>
+            <span><span class="tag done">Realizada</span>entra no “a receber pelo que já foi realizado”</span>
             <span><span class="tag remt">💻 Remota</span> visita remota — sem custo de transporte</span>
-            <span><span class="tag pend">Pendente</span>de setembro</span>
-            <span><span class="tag jess compName">acompanhante</span>visita de passagem</span>
             <span><span class="tag diff">prev. 4 h</span>horas cumpridas diferentes do previsto</span>
             <span><span class="hstep demo">−</span><span class="hstep demo">+</span>ajuste rápido de horas no bloco</span>
           </div>
@@ -408,10 +408,6 @@ label.f textarea{min-height:84px;resize:vertical}
       <label class="f">Situação<select id="v-st"><option value="ag">Agendada</option><option value="ok">Realizada</option><option value="cn">Cancelada</option></select></label>
       <label class="f">Modalidade<select id="v-mode"><option value="pre">Presencial</option><option value="rem">Remota (sem transporte)</option></select></label>
     </div>
-    <div class="checks">
-      <label><input type="checkbox" id="v-pend"> Pendente de setembro</label>
-      <label><input type="checkbox" id="v-jess"> Passagem com <span class="compName">acompanhante</span></label>
-    </div>
     <label class="f">Observações e pendências<textarea id="v-note" placeholder="Ex.: levar planilha de temperatura; cobrar laudo de potabilidade; retorno sobre controle de pragas"></textarea></label>
     <div class="info" id="v-info"></div>
     <div class="acts">
@@ -434,9 +430,9 @@ label.f textarea{min-height:84px;resize:vertical}
     </div>
     <div class="grid2">
       <label class="f">Horas previstas no mês<input type="number" id="c-hours" min="0" step="0.5"></label>
-      <label class="f">Polo<select id="c-polo"><option value="1">Itaim</option><option value="2">Campo Belo / Brooklin</option><option value="3">Bom Retiro / V. Madalena</option><option value="4">Terça fixa (Guarulhos)</option><option value="5">Outros / novos clientes</option></select></label>
+      <label class="f">Polo<select id="c-polo"><option value="1">Itaim Bibi</option><option value="2">Campo Belo / Brooklin / Vila Clementino</option><option value="3">Bom Retiro / Vila Madalena</option><option value="4">Guarulhos (Vila São João)</option><option value="5">Jardim Dom Bosco</option></select></label>
     </div>
-    <label class="f">Contrato<input id="c-contract"></label>
+    <label class="f">Contrato e frequência de visita<input id="c-contract"></label>
     <div class="grid2">
       <label class="f">Tarifa extra intermunicipal por trecho (R$)<input type="number" id="c-extra" min="0" step="0.01" placeholder="0,00"></label>
       <span></span>
@@ -585,7 +581,7 @@ label.f textarea{min-height:84px;resize:vertical}
     const cy=new Date().getFullYear(); const years=new Set([cy-1,cy,cy+1,cy+2,y]); S.visits.forEach(v=>years.add(Number(v.d.slice(0,4))));
     $('#selMonth').innerHTML=MONTHS.map((n,i)=>'<option value="'+i+'"'+(i===m?' selected':'')+'>'+n.charAt(0).toUpperCase()+n.slice(1)+'</option>').join('');
     $('#selYear').innerHTML=[...years].sort().map(a=>'<option'+(a===y?' selected':'')+'>'+a+'</option>').join('');
-    renderCalendar(y,m); renderClients(); renderFinance(); renderNF(); renderStatus(); document.querySelectorAll('.compName').forEach(el=>el.textContent=S.companion||'acompanhante'); const hl=$('#homeLines'); if(hl) hl.textContent=S.homeLines||'—'; const ha=$('#homeAddr'); if(ha && document.activeElement!==ha) ha.value=S.home||'';
+    renderCalendar(y,m); renderClients(); refreshCarteiraBtn(); renderFinance(); renderNF(); renderStatus(); document.querySelectorAll('.compName').forEach(el=>el.textContent=S.companion||'acompanhante'); const hl=$('#homeLines'); if(hl) hl.textContent=S.homeLines||'—'; const ha=$('#homeAddr'); if(ha && document.activeElement!==ha) ha.value=S.home||'';
   }
 
   function renderCalendar(y,m){
@@ -625,8 +621,6 @@ label.f textarea{min-height:84px;resize:vertical}
     b.title=c.name+' • '+v.t+'–'+endOf(v)+' • '+hfmt(v.h)+(v.hp!==undefined?' (previsto '+hfmt(v.hp)+')':'')+(v.note?'\n'+v.note:'');
     let tags='';
     if(v.hp!==undefined && v.hp!==v.h) tags+='<span class="tag diff">prev. '+hfmt(v.hp)+'</span>';
-    if(v.pend) tags+='<span class="tag pend">Pendente</span>';
-    if(v.jess) tags+='<span class="tag jess">'+esc(S.companion||'acompanhante')+'</span>';
     if(v.st==='ok') tags+='<span class="tag done">Realizada</span>';
     if(v.mode==='rem') tags+='<span class="tag remt">💻 Remota</span>';
     if(v.st==='cn') tags+='<span class="tag canc">Cancelada</span>';
@@ -746,19 +740,19 @@ label.f textarea{min-height:84px;resize:vertical}
   function openVisit(v,dateForNew){
     editing = v ? v.id : null;
     $('#v-c').innerHTML=S.clients.map(c=>'<option value="'+c.id+'">'+esc(c.name)+'</option>').join('');
-    const base=v||{c:S.clients[0].id,d:dateForNew||iso(new Date(S.view.year,S.view.month,1)),t:'09:00',h:2,pend:false,jess:false,st:'ag',note:''};
+    const base=v||{c:S.clients[0].id,d:dateForNew||iso(new Date(S.view.year,S.view.month,1)),t:'09:00',h:2,st:'ag',note:''};
     $('#v-c').value=base.c; $('#v-d').value=base.d; $('#v-t').value=base.t; $('#v-h').value=base.h; $('#v-hp').value=base.hp??base.h; $('#v-te').value=fromMin(toMin(base.t)+Number(base.h)*60);
     $('#v-from').value=v&&v.from?v.from:''; $('#v-from').placeholder=v?'automático: '+fromOf(v):'automático: casa ou cliente anterior';
     $('#v-fare').value=v&&v.fareM?v.fare:''; $('#v-fare').placeholder=v?'automático: '+brl(autoFare(v)):'automático';
     $('#v-farehint').textContent=v?('Volta para casa no dia: '+brl(backOf(v.d))+' • total do dia '+brl(dayCostOf(v.d))):'O custo é calculado ao salvar.';
-    $('#v-st').value=base.st; $('#v-mode').value=base.mode==='rem'?'rem':'pre'; $('#v-pend').checked=!!base.pend; $('#v-jess').checked=!!base.jess; $('#v-note').value=base.note||'';
+    $('#v-st').value=base.st; $('#v-mode').value=base.mode==='rem'?'rem':'pre'; $('#v-note').value=base.note||'';
     $('#dv-title').textContent=v?'Editar visita':'Nova visita'; $('#v-del').hidden=!v; $('#v-ok').textContent=v?'Aplicar':'Adicionar';
     updateInfo(); $('#dv').showModal();
   }
   function updateRoute(){ const c=client($('#v-c').value); if(!c) return; const v=editing?S.visits.find(x=>x.id===editing):null;
     const from=$('#v-from').value.trim()||(v&&v.c===c.id&&v.d===$('#v-d').value?fromOf(v):S.home);
     $('#v-to').textContent='De: '+from+'  →  Para: '+c.addr; $('#v-route').href=routeUrl(from,c.addr); }
-  function updateInfo(){ updateRoute(); const c=client($('#v-c').value); $('#v-info').innerHTML=c?'<b>'+esc(c.addr)+'</b><br>'+esc(c.contract)+(c.route?'<br>🚌 '+esc(c.route):'')+(c.info?'<br>'+esc(c.info):''):''; $('#dv-sub').textContent=c?c.name:''; }
+  function updateInfo(){ updateRoute(); const c=client($('#v-c').value); $('#v-info').innerHTML=c&&c.route?'🚌 '+esc(c.route):''; $('#v-info').hidden=!(c&&c.route); $('#dv-sub').textContent=c?c.name:''; }
 
   $('#v-c').addEventListener('change',updateInfo);
   $('#v-from').addEventListener('input',updateRoute); $('#v-d').addEventListener('change',updateRoute);
@@ -771,11 +765,12 @@ label.f textarea{min-height:84px;resize:vertical}
   $('#fv').addEventListener('submit',e=>{
     e.preventDefault();
     const hpv=Number($('#v-hp').value);
-    const data={c:$('#v-c').value,d:$('#v-d').value,t:$('#v-t').value,h:r2(Number($('#v-h').value)),st:$('#v-st').value,pend:$('#v-pend').checked,jess:$('#v-jess').checked,note:$('#v-note').value.trim()};
+    const data={c:$('#v-c').value,d:$('#v-d').value,t:$('#v-t').value,h:r2(Number($('#v-h').value)),st:$('#v-st').value,note:$('#v-note').value.trim()};
     if(!data.d||!data.t||!(data.h>=0)||!(hpv>0)) return;
     let target;
     if(editing){ target=S.visits.find(x=>x.id===editing); Object.assign(target,data); }
     else { S.seq=(S.seq||0)+1; target=Object.assign({id:'v'+S.seq},data); S.visits.push(target); }
+    delete target.pend; delete target.jess;
     if(hpv!==data.h) target.hp=hpv; else delete target.hp;
     if($('#v-mode').value==='rem') target.mode='rem'; else delete target.mode;
     const fromV=$('#v-from').value.trim(); if(fromV) target.from=fromV; else delete target.from;
@@ -864,6 +859,49 @@ label.f textarea{min-height:84px;resize:vertical}
   try{ if(localStorage.getItem('agenda-help-open')==='1') $('#helpFold').open=true; }catch(e){}
   $('#helpFold').addEventListener('toggle',()=>{try{localStorage.setItem('agenda-help-open',$('#helpFold').open?'1':'0')}catch(e){}});
 
+
+  // ===== Atualização única da carteira (29/09/2026) =====
+  const CARTEIRA_V='2026-09-29';
+  const norm = t => String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  const CARTEIRA=[
+    {m:n=>/paul/.test(n)&&/bom ?retiro/.test(n), name:"Paul's Boutique Bom Retiro", addr:'R. Silva Pinto, 450 - Bom Retiro - São Paulo - SP, 01126-010', hours:6, polo:3, contract:'6 h/mês • 2 visitas quinzenais de 3 h'},
+    {m:n=>/paul/.test(n)&&/itaim/.test(n), name:"Paul's Boutique Itaim Bibi", addr:'R. Dr. Renato Paes de Barros, 167 - Itaim Bibi - São Paulo - SP, 04530-000', hours:6, polo:1, contract:'6 h/mês • 2 visitas quinzenais de 3 h'},
+    {m:n=>/paul/.test(n)&&/madalena/.test(n), name:"Paul's Boutique Vila Madalena", addr:'R. Girassol, 185 - Vila Madalena - São Paulo - SP, 05433-000', hours:6, polo:3, contract:'6 h/mês • 2 visitas quinzenais de 3 h'},
+    {m:n=>/constantin/.test(n), name:'Constantinus Grill', addr:'Rua Constantino de Sousa, 956 - Campo Belo - São Paulo - SP, 04605-003', hours:3, polo:2, contract:'3 h/mês • 1 visita mensal de 3 h'},
+    {m:n=>/(pergol|pegol)/.test(n)&&/campo ?belo/.test(n), name:'La Pergoletta Campo Belo', addr:'R. Antônio de Macedo Soares, 1132 - Campo Belo - São Paulo - SP, 04607-001', hours:2, polo:2, contract:'2 h/mês • 1 visita mensal de 2 h', oct:3, octInfo:'Out/2026: 2 visitas — a mensal (2 h) + 1 pendente de setembro (1 h).'},
+    {m:n=>/(pergol|pegol)/.test(n)&&/itaim/.test(n), name:'La Pergoletta Itaim', addr:'Rua Doutor Renato Paes de Barros, 199 - Itaim Bibi - São Paulo - SP, 04530-000', hours:4, polo:1, contract:'4 h/mês • 2 visitas quinzenais de 2 h'},
+    {m:n=>/(pergol|pegol)/.test(n)&&/brooklin/.test(n), name:'La Pergoletta Brooklin', addr:'R. Califórnia, 713 - Brooklin - São Paulo - SP, 04566-061', hours:4, polo:2, contract:'4 h/mês • 2 visitas quinzenais de 2 h'},
+    {m:n=>/falaf/.test(n), name:'Falafull', addr:'R. Santa Generosa, 27 - Vila Clementino - São Paulo - SP, 04042-010', hours:8, polo:2, contract:'8 h/mês • 2 visitas de 2 h + 1 visita quinzenal de 4 h', octInfo:'Pendência de setembro (4 h) realizada em 01/10 — conta em setembro.'},
+    {m:n=>/\bmun\b/.test(n), name:'Mun Alimentos', addr:'R. Afonso Pena, 322 - Bom Retiro - São Paulo - SP, 01124-000', hours:12, polo:3, contract:'12 h/mês • 3 visitas semanais de 4 h'},
+    {m:n=>/reserva/.test(n), name:'Reserva Mundi', addr:'R. Cavadas, 1166 - Vila Sao João, Guarulhos - SP, 07044-000', hours:16, polo:4, contract:'16 h/mês • 4 visitas semanais de 4 h', extra:7.75, oct:26.11, octInfo:'Out/2026: 16 h + 10,11 h pendentes de setembro em home office (análise de riscos de Food Fraud; locais para estudo de análise sensorial). Plano de ação aguarda o retorno da auditoria IFS.'},
+    {m:n=>/(marmita|gigi)/.test(n), name:'Marmita Fit da Gigi', addr:'R. Bento Branco de Andrade Filho, 254 - Jardim Dom Bosco, São Paulo - SP, 04757-000', hours:8, polo:5, contract:'8 h/mês • 2 visitas quinzenais de 4 h', oct:12, octInfo:'Out/2026: 3 visitas semanais de 4 h (inclui a pendência de setembro).'}
+  ];
+  function planCarteira(){
+    const used=new Set(); return CARTEIRA.map(k=>{ const c=S.clients.find(x=>!used.has(x.id)&&k.m(norm(x.name))); if(c) used.add(c.id); return {k,c}; });
+  }
+  function refreshCarteiraBtn(){ const b=$('#carteiraBtn'); if(b) b.hidden = readOnly || S.carteiraV===CARTEIRA_V; }
+  $('#carteiraBtn').addEventListener('click',()=>{
+    const plan=planCarteira(); const keep=new Set(plan.filter(p=>p.c).map(p=>p.c.id));
+    const others=S.clients.filter(c=>!keep.has(c.id)&&c.hours>0);
+    const msg='Atualizar a carteira com os 11 clientes atuais?\n\n'+
+      plan.map(p=>(p.c?'✓ atualiza “'+p.c.name+'”':'+ cria')+' → '+p.k.name).join('\n')+
+      (others.length?'\n\nSaem do painel (horas previstas = 0; histórico preservado):\n'+others.map(c=>'– '+c.name).join('\n'):'')+
+      '\n\nSetembro/2026 fica com as horas previstas atuais. Outubro/2026 recebe as horas com pendências.';
+    if(!confirm(msg)) return;
+    const sep='2026-09', oct='2026-10';
+    if(!S.expected[sep]){ S.expected[sep]={}; S.clients.forEach(c=>{ S.expected[sep][c.id]=c.hours||0; }); }
+    S.expected[oct]=S.expected[oct]||{};
+    plan.forEach(({k,c})=>{
+      if(!c){ c={id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),route:'',razao:'',cnpj:'',extraFare:0,info:''}; S.clients.push(c); if(S.expected[sep][c.id]===undefined) S.expected[sep][c.id]=0; }
+      Object.assign(c,{name:k.name,addr:k.addr,hours:k.hours,polo:k.polo,contract:k.contract});
+      if(k.extra && !(Number(c.extraFare)>0)) c.extraFare=k.extra;
+      if(k.octInfo) c.info=k.octInfo+(c.info&&c.info.indexOf(k.octInfo)<0?'\n'+c.info:'');
+      if(k.oct!==undefined) S.expected[oct][c.id]=k.oct; else delete S.expected[oct][c.id];
+    });
+    others.forEach(c=>{ c.hours=0; if(S.expected[oct]) delete S.expected[oct][c.id]; });
+    S.carteiraV=CARTEIRA_V; markDirty(); refreshCarteiraBtn(); toast('Carteira atualizada: 11 clientes.');
+  });
+
   // Aviso com desfazer
   let tmr=null;
   function toast(msg,undoFn){
@@ -875,12 +913,12 @@ label.f textarea{min-height:84px;resize:vertical}
 
   // Exportar planilha (CSV)
   $('#csvBtn').addEventListener('click',async()=>{
-    const rows=[['Data','Dia','Entrada','Saída','Horas cumpridas','Cliente','Endereço','Situação','Modalidade','Pendente set.','Passagem '+(S.companion||'acompanhante'),'Valor (R$)','Observações']];
+    const rows=[['Data','Dia','Entrada','Saída','Horas cumpridas','Cliente','Endereço','Situação','Modalidade','Valor (R$)','Observações']];
     const st={ag:'Agendada',ok:'Realizada',cn:'Cancelada'};
     monthVisits().slice().sort((a,b)=>(a.d+a.t).localeCompare(b.d+b.t)).forEach(v=>{const c=client(v.c)||{}; const dt=new Date(v.d+'T12:00:00');
-      rows.push([v.d.split('-').reverse().join('/'),DOW[dt.getDay()],v.t,endOf(v),String(v.h).replace('.',','),c.name,c.addr,st[v.st],v.mode==='rem'?'Remota':'Presencial',v.pend?'Sim':'Não',v.jess?'Sim':'Não',v.st==='cn'?'0':(v.h*S.rate).toFixed(2).replace('.',','),v.note||'']);});
-    const t=totals(); const nn=x=>x.toFixed(2).replace('.',','); const blank=['','','','','','','','','','','']; rows.push([]); rows.push(['Resumo','','','','','','','','','Realizado','Agendado','Total']);
-    rows.push(['Honorários'].concat(blank.slice(0,8)).concat([nn(t.ok.rev),nn(t.ag.rev),nn(t.rev)])); rows.push(['Transporte (reembolso Tria)'].concat(blank.slice(0,8)).concat([nn(t.ok.cost),nn(t.ag.cost),nn(t.cost)])); rows.push(['Total a receber'].concat(blank.slice(0,8)).concat([nn(t.ok.net),nn(t.ag.net),nn(t.net)]));
+      rows.push([v.d.split('-').reverse().join('/'),DOW[dt.getDay()],v.t,endOf(v),String(v.h).replace('.',','),c.name,c.addr,st[v.st],v.mode==='rem'?'Remota':'Presencial',v.st==='cn'?'0':(v.h*S.rate).toFixed(2).replace('.',','),v.note||'']);});
+    const t=totals(); const nn=x=>x.toFixed(2).replace('.',','); const blank=['','','','','','','','','']; rows.push([]); rows.push(['Resumo','','','','','','','','Realizado','Agendado','Total']);
+    rows.push(['Honorários'].concat(blank.slice(0,7)).concat([nn(t.ok.rev),nn(t.ag.rev),nn(t.rev)])); rows.push(['Transporte (reembolso Tria)'].concat(blank.slice(0,7)).concat([nn(t.ok.cost),nn(t.ag.cost),nn(t.cost)])); rows.push(['Total a receber'].concat(blank.slice(0,7)).concat([nn(t.ok.net),nn(t.ag.net),nn(t.net)]));
     const csv='\ufeff'+rows.map(r=>r.map(x=>'"'+String(x??'').replace(/"/g,'""')+'"').join(';')).join('\r\n');
     const name='agenda-'+monthKey()+'.csv';
     exportDrive(name,csv);
