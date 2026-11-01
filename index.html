@@ -157,6 +157,9 @@ body.side-off .sidetoggle{writing-mode:vertical-rl;padding:14px 8px;min-height:1
 .imp-row.ok{border-color:#2e7d4f}.imp-row.skip{opacity:.7}.imp-row.err{border-color:#d93025}
 .imp-row small{display:block;color:var(--ink-2)}
 #imp-text{width:100%;min-height:150px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2);padding:8px}
+.genbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:8px 0}
+.rleg .pick{display:flex;gap:12px;flex-wrap:wrap;font-size:12.5px;margin-top:6px;padding:6px 8px;background:var(--surface-2);border-radius:8px}
+.rleg .pick label{display:flex;gap:4px;align-items:center}
 /* Abas recolhíveis */
 .folds{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;align-items:start}
 .folds{grid-template-columns:1fr 1fr}
@@ -469,6 +472,7 @@ label.f textarea{min-height:84px;resize:vertical}
       <label class="f">Centro de custo<input id="r-cc" required></label>
     </div>
     <label class="ckline"><input type="checkbox" id="r-back"> Incluir o retorno ao ponto fixo (casa) no reembolso</label>
+    <div class="genbar"><button type="button" class="btn" id="r-gen">🗺️ Gerar mapas das rotas do ciclo</button><span class="small" id="r-gen-st">Cria uma imagem por trecho (rota do Google para o horário da visita) e salva na pasta do ciclo no Drive.</span></div>
     <div id="r-legs"></div>
     <div class="info" id="r-sum"></div>
     <div class="check">
@@ -477,7 +481,7 @@ label.f textarea{min-height:84px;resize:vertical}
       <label><input type="checkbox" class="rck"> Datas das despesas dentro do ciclo escolhido (e com menos de 30 dias)</label>
       <label><input type="checkbox" class="rck"> Centro de custo (Tria)</label>
       <label><input type="checkbox" class="rck"> Projeto correspondente (nome do cliente) em cada trecho</label>
-      <label><input type="checkbox" class="rck"> Print do percurso (Google Maps) anexado em cada trecho</label>
+      <label><input type="checkbox" class="rck"> Print do percurso (seu print ou mapa gerado) conferido em cada trecho</label>
       <label><input type="checkbox" class="rck"> Foto do recibo / extrato do Bilhete Único anexada (quando houver)</label>
       <label><input type="checkbox" class="rck"> Valores conforme tarifa vigente da rota (política Tria)</label>
     </div>
@@ -1100,7 +1104,7 @@ label.f textarea{min-height:84px;resize:vertical}
       downloadShot(); toast('Imagem baixada. Envie pelo WhatsApp ou e-mail.'); },'image/png'); });
 
   // ===== Direcionamentos da coordenação (PDFs no Drive) =====
-  const APP_VERSION='2026.11.01-a'; let serverVersion=null, dirsErr='';
+  const APP_VERSION='2026.11.01-b'; let serverVersion=null, dirsErr='';
   function checkServer(){ if(!GS) return; call('ping').then(r=>{ serverVersion=r&&r.version||'?'; }).catch(()=>{ serverVersion='antigo'; }).finally(()=>{ if(serverVersion==='antigo'||serverVersion!==APP_VERSION) toast('O Code.gs do Apps Script está desatualizado: publique uma Nova versão para ativar os direcionamentos.'); }); }
   let DIRS=[], dirsAt=0;
   const MES=['janeiro','fevereiro','marco','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
@@ -1187,13 +1191,16 @@ label.f textarea{min-height:84px;resize:vertical}
     const days=[...new Set(S.visits.filter(v=>v.d>=A&&v.d<=B&&v.st!=='cn').map(v=>v.d))].sort(); const out=[];
     days.forEach(d=>{ const l=dayList(d); if(!l.length) return;
       l.forEach(v=>{ if(v.st!=='ok') return; const c=client(v.c)||{name:'?',addr:''}; const val=fareOf(v,l); const from=fromOf(v); const ex=extra(v.c);
-        out.push({key:'v:'+v.id,d,kind:'ida',v,project:c.name,from,to:c.addr,value:val,auto:autoDesc('ida',val,Math.min(ex,val),from,c.addr),desc:v.fareDesc,shot:v.shot,rcpt:v.rcpt}); });
+        out.push({key:'v:'+v.id,d,kind:'ida',v,project:c.name,from,to:c.addr,value:val,auto:autoDesc('ida',val,Math.min(ex,val),from,c.addr),desc:v.fareDesc,shot:v.shot,rcpt:v.rcpt,gen:v.gen,use:v.shotUse}); });
       if(!withBack) return;
       const last=l[l.length-1]; if(last.st!=='ok') return; const lc=client(last.c)||{name:'?',addr:''}; const bv=backOf(d);
-      out.push({key:'b:'+d,d,kind:'volta',project:lc.name,from:lc.addr,to:S.home,value:bv,auto:autoDesc('retorno ao ponto fixo',bv,Math.min(extra(last.c),bv),lc.addr,S.home),desc:(S.backDesc||{})[d],shot:(S.backShot||{})[d],rcpt:(S.backRcpt||{})[d]});
+      out.push({key:'b:'+d,d,kind:'volta',project:lc.name,from:lc.addr,to:S.home,value:bv,auto:autoDesc('retorno ao ponto fixo',bv,Math.min(extra(last.c),bv),lc.addr,S.home),desc:(S.backDesc||{})[d],shot:(S.backShot||{})[d],rcpt:(S.backRcpt||{})[d],gen:(S.backGen||{})[d],use:(S.backUse||{})[d],lastEnd:endOf(last)});
     });
     return out.filter(x=>x.value>0);
   }
+  // Qual imagem vai para o relatório: print manual ou mapa gerado (escolha por trecho)
+  const effShot = x => (x.use==='gen' && x.gen) ? x.gen : (x.use==='man' && x.shot) ? x.shot : (x.shot || x.gen || null);
+  function setUse(key,val){ if(key.startsWith('v:')){ const v=S.visits.find(y=>y.id===key.slice(2)); if(v) v.shotUse=val; } else { S.backUse=S.backUse||{}; S.backUse[key.slice(2)]=val; } markDirty(); }
   let shotTarget=null;
   function openReimb(){
     if(!S.costCenter) S.costCenter='Tria';
@@ -1206,16 +1213,19 @@ label.f textarea{min-height:84px;resize:vertical}
   function drawReimb(){
     const cyc=curCycle(); const L=reimbLegs(cyc); let html=''; const lim=new Date(); lim.setHours(0,0,0,0); lim.setDate(lim.getDate()-30); const limIso=isoOf(lim);
     L.forEach(x=>{ const dt=x.d.split('-').reverse().slice(0,2).join('/');
-      html+='<div class="rleg'+(x.shot?'':' miss')+'"><div class="rh"><span>'+dt+' • '+(x.kind==='ida'?'Ida':'Retorno ao ponto fixo')+' — '+esc(x.project)+'</span><span>'+brl(x.value)+'</span></div>'+(x.d<limIso?'<small class="no">⚠️ Despesa com mais de 30 dias — a política Tria não reembolsa.</small>':'')+
+      const es=effShot(x);
+      html+='<div class="rleg'+(es?'':' miss')+'"><div class="rh"><span>'+dt+' • '+(x.kind==='ida'?'Ida':'Retorno ao ponto fixo')+' — '+esc(x.project)+'</span><span>'+brl(x.value)+'</span></div>'+(x.d<limIso?'<small class="no">⚠️ Despesa com mais de 30 dias — a política Tria não reembolsa.</small>':'')+
         '<small>Data da despesa: '+x.d.split('-').reverse().join('/')+' • Projeto: '+esc(x.project)+'<br>'+esc(x.from)+' → '+esc(x.to)+'</small>'+
         '<textarea data-desc="'+x.key+'" aria-label="Descrição do valor">'+esc(x.desc||x.auto)+'</textarea>'+
         '<div class="ra"><a class="btn sm" target="_blank" rel="noopener" href="'+routeUrl(x.from,x.to)+'">🗺️ Ver rota</a>'+
         '<button type="button" class="btn sm" data-shot="'+x.key+'">📎 '+(x.shot?'Trocar print':'Anexar print')+'</button>'+
         (x.shot?'<a class="ok" target="_blank" rel="noopener" href="'+x.shot.url+'">✓ print</a>':'<span class="no">sem print</span>')+
         '<button type="button" class="btn sm" data-rcpt="'+x.key+'">🧾 '+(x.rcpt?'Trocar recibo':'Recibo / extrato')+'</button>'+
-        (x.rcpt?'<a class="ok" target="_blank" rel="noopener" href="'+x.rcpt.url+'">✓ recibo</a>':'')+'</div></div>'; });
+        (x.rcpt?'<a class="ok" target="_blank" rel="noopener" href="'+x.rcpt.url+'">✓ recibo</a>':'')+
+        (x.gen?'<a class="ok" target="_blank" rel="noopener" href="'+x.gen.url+'">✓ mapa gerado'+(x.gen.shifted?' (data de referência)':'')+'</a><button type="button" class="btn sm" data-regen="'+x.key+'">↻</button>':'<button type="button" class="btn sm" data-regen="'+x.key+'">🗺️ Gerar mapa</button>')+'</div>'+
+        (x.shot&&x.gen?'<div class="pick">Usar no relatório: <label><input type="radio" name="use-'+x.key+'" data-use="'+x.key+'" value="man"'+(es===x.shot?' checked':'')+'> meu print</label><label><input type="radio" name="use-'+x.key+'" data-use="'+x.key+'" value="gen"'+(es===x.gen?' checked':'')+'> mapa gerado</label></div>':'')+'</div>'; });
     $('#r-legs').innerHTML=html||'<p class="small">Nenhum trecho com custo realizado neste ciclo.</p>';
-    const tot=r2(L.reduce((a,x)=>a+x.value,0)); const miss=L.filter(x=>!x.shot).length;
+    const tot=r2(L.reduce((a,x)=>a+x.value,0)); const miss=L.filter(x=>!effShot(x)).length;
     const A=isoOf(cyc.a), B=isoOf(cyc.b); const notDone=S.visits.filter(v=>v.d>=A&&v.d<=B&&v.st==='ag'&&v.mode!=='rem').length;
     const t0=new Date(); t0.setHours(0,0,0,0); const late=cyc.due<t0; const old=L.filter(x=>x.d<limIso).length;
     $('#r-sum').innerHTML=(late?'⛔ <b>Prazo deste ciclo venceu em '+brFull(isoOf(cyc.due))+'.</b> Pela política, despesas enviadas fora do prazo vão para o próximo ciclo e ciclos anteriores não são reembolsados — confirme com a coordenação.<br>':'📅 Enviar para aprovação até <b>'+brFull(isoOf(cyc.due))+'</b> • pagamento previsto dia 30.<br>')+(old?'⚠️ '+old+' trecho(s) com mais de 30 dias.<br>':'')+'<b>'+L.length+' trechos • total a reembolsar '+brl(tot)+'</b>'+(miss?'<br>⚠️ '+miss+' trecho(s) sem print do percurso.':'<br>✓ Todos os trechos têm print.')+(notDone?'<br>ℹ️ '+notDone+' visita(s) presencial(is) ainda como “Agendada” não entram no relatório. Depois de realizadas, marque como Realizada.':'');
@@ -1227,8 +1237,58 @@ label.f textarea{min-height:84px;resize:vertical}
   $('#r-legs').addEventListener('change',e=>{ const t=e.target.closest('[data-desc]'); if(t) setDesc(t.dataset.desc,t.value); });
   let rcptMode=false;
   $('#r-cyc').addEventListener('change',drawReimb);
+  $('#r-legs').addEventListener('change',e=>{ const r=e.target.closest('[data-use]'); if(r){ setUse(r.dataset.use,r.value); drawReimb(); } });
+  const cycFolderName = c => 'Ciclo '+pad(c.a.getDate())+'.'+pad(c.a.getMonth()+1)+' a '+pad(c.b.getDate())+'.'+pad(c.b.getMonth()+1)+'.'+c.b.getFullYear();
+  const safeName = s => String(s).replace(/[\\/:*?"<>|]/g,'-').replace(/\s+/g,' ').trim();
+  function legLabel(x){ if(x.kind!=='ida') return 'volta (ponto de partida)'; const pn=placeName(x.from); return 'ida ('+(pn==='casa'?'casa':'de '+(pn.length>40?pn.slice(0,40)+'…':pn))+')'; }
+  function legFileName(x){ return safeName(x.d.slice(8,10)+'.'+x.d.slice(5,7)+' - '+x.project+' - '+legLabel(x))+'.jpg'; }
+  const loadImg = src => new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=src; });
+  async function composeRoute(x,r){
+    const W=1080, P=44, F='system-ui,-apple-system,Segoe UI,Roboto,sans-serif'; const map=await loadImg('data:image/png;base64,'+r.map);
+    const cv=document.createElement('canvas'); const ctx=cv.getContext('2d'); ctx.font='400 26px '+F;
+    const lines=[]; const vt={bus:'Ônibus',subway:'Metrô',metro_rail:'Metrô',heavy_rail:'Trem',commuter_train:'Trem',rail:'Trem',tram:'VLT'};
+    r.steps.forEach(s=>{ if(s.type==='walk'){ if(s.text) lines.push({c:'#5f6b75',t:'A pé — '+s.text+(s.dist?' ('+s.dist+')':'')}); }
+      else lines.push({c:'#14202b',b:true,t:(s.vehicle||vt[s.type]||'Transporte')+' '+s.line+(s.lineName&&s.lineName!==s.line?' — '+s.lineName:'')+'  •  '+s.dep+' → '+s.arr},{c:'#5f6b75',t:'   '+s.from+' → '+s.to+(s.stops?' ('+s.stops+' paradas)':'')}); });
+    const wrapL=[]; lines.forEach(l=>{ ctx.font=(l.b?'600 ':'400 ')+'26px '+F; wrapText(ctx,l.t,W-2*P).forEach(s=>wrapL.push({c:l.c,b:l.b,t:s})); });
+    const head=[ {f:'700 36px',c:'#14202b',t:'Percurso — '+brFull(x.d)+' — '+(x.kind==='ida'?'Ida':'Volta')},
+      {f:'400 26px',c:'#44515c',t:'De: '+x.from}, {f:'400 26px',c:'#44515c',t:'Para: '+x.to},
+      {f:'600 28px',c:'#14202b',t:'Saída '+r.dep+'  →  Chegada '+r.arr+'   •   '+r.duration+'   •   '+r.distance} ];
+    const headW=[]; head.forEach(l=>{ ctx.font=l.f+' '+F; wrapText(ctx,l.t,W-2*P).forEach(s=>headW.push({f:l.f,c:l.c,t:s})); });
+    const mapS=W-2*P; const foot=['Projeto: '+x.project+'   •   Valor lançado: '+brl(x.value), 'Rota de transporte público sugerida pelo Google Maps para o horário da visita.'];
+    if(r.shifted) foot.push('Horário de referência: '+new Date(r.whenUsed).toLocaleDateString('pt-BR')+' (mesmo dia da semana e hora; o Google não calcula datas passadas).');
+    ctx.font='400 21px '+F; const footW=[]; foot.forEach(t=>wrapText(ctx,t,W-2*P).forEach(s=>footW.push(s)));
+    const H=P+headW.length*40+16+mapS+24+wrapL.length*36+20+footW.length*30+P;
+    cv.width=W; cv.height=H; ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H); let y=P;
+    headW.forEach(l=>{ ctx.font=l.f+' '+F; ctx.fillStyle=l.c; ctx.fillText(l.t,P,y+30); y+=40; }); y+=16;
+    ctx.drawImage(map,P,y,mapS,mapS); ctx.strokeStyle='#dfe4e8'; ctx.strokeRect(P,y,mapS,mapS); y+=mapS+24;
+    wrapL.forEach(l=>{ ctx.font=(l.b?'600 ':'400 ')+'26px '+F; ctx.fillStyle=l.c; ctx.fillText(l.t,P,y+26); y+=36; }); y+=20;
+    footW.forEach(t=>{ ctx.font='400 21px '+F; ctx.fillStyle='#8a949c'; ctx.fillText(t,P,y+22); y+=30; });
+    return cv.toDataURL('image/jpeg',0.9).split(',')[1];
+  }
+  let genBusy=false;
+  async function genMaps(onlyKey){
+    if(!GS){ toast('Conecte ao Drive (🔌 Conexão).'); return; } if(genBusy) return;
+    if(serverVersion && serverVersion!==APP_VERSION){ toast('Publique a Nova versão do Code.gs no Apps Script para gerar mapas.'); return; }
+    const cyc=curCycle(); let L=reimbLegs(cyc); L=onlyKey?L.filter(x=>x.key===onlyKey):L.filter(x=>!x.gen);
+    if(!L.length){ toast('Todos os trechos do ciclo já têm mapa gerado. Use ↻ para refazer um.'); return; }
+    genBusy=true; $('#r-gen').disabled=true; const st=$('#r-gen-st'); const fails=[]; let done=0;
+    for(const x of L){ st.textContent='Gerando '+(done+1)+' de '+L.length+': '+brFull(x.d).slice(0,5)+' • '+x.project+'…';
+      try{
+        const when=x.kind==='ida'?x.d+'T'+x.v.t+':00-03:00':x.d+'T'+x.lastEnd+':00-03:00';
+        const r=await call('routeLeg',JSON.stringify({from:mapsAddr(x.from),to:mapsAddr(x.to),when,mode:x.kind==='ida'?'arrive':'depart'}));
+        if(!r||!r.ok) throw new Error(r&&r.reason||'sem rota');
+        const b64=await composeRoute(x,r); const up=await call('uploadShot',legFileName(x),'image/jpeg',b64,cycFolderName(cyc));
+        const gen={id:up.id,url:up.url,shifted:!!r.shifted};
+        if(x.key.startsWith('v:')){ const v=S.visits.find(y=>y.id===x.key.slice(2)); if(v) v.gen=gen; } else { S.backGen=S.backGen||{}; S.backGen[x.key.slice(2)]=gen; }
+        markDirty();
+      }catch(err){ fails.push(brFull(x.d).slice(0,5)+' '+x.project+' ('+(err&&err.message||err)+')'); }
+      done++; }
+    genBusy=false; $('#r-gen').disabled=false; drawReimb();
+    st.textContent=(done-fails.length)+' mapa(s) gerado(s) na pasta “'+cycFolderName(cyc)+'”.'+(fails.length?' Falharam: '+fails.join('; '):'');
+  }
+  $('#r-gen').addEventListener('click',()=>genMaps());
   $('#r-back').addEventListener('change',e=>{ S.reimbBack=e.target.checked; markDirty(); drawReimb(); });
-  $('#r-legs').addEventListener('click',e=>{ const r=e.target.closest('[data-rcpt]'); if(r){ if(!GS){ toast('Conecte ao Drive (🔌 Conexão) para anexar.'); return; } shotTarget=r.dataset.rcpt; rcptMode=true; $('#shotInput').value=''; $('#shotInput').click(); return; } rcptMode=false; const b=e.target.closest('[data-shot]'); if(!b) return; if(!GS){ toast('Para anexar o print é preciso estar conectado ao Drive (🔌 Conexão).'); return; } shotTarget=b.dataset.shot; $('#shotInput').value=''; $('#shotInput').click(); });
+  $('#r-legs').addEventListener('click',e=>{ const rg=e.target.closest('[data-regen]'); if(rg){ genMaps(rg.dataset.regen); return; } const r=e.target.closest('[data-rcpt]'); if(r){ if(!GS){ toast('Conecte ao Drive (🔌 Conexão) para anexar.'); return; } shotTarget=r.dataset.rcpt; rcptMode=true; $('#shotInput').value=''; $('#shotInput').click(); return; } rcptMode=false; const b=e.target.closest('[data-shot]'); if(!b) return; if(!GS){ toast('Para anexar o print é preciso estar conectado ao Drive (🔌 Conexão).'); return; } shotTarget=b.dataset.shot; $('#shotInput').value=''; $('#shotInput').click(); });
   function shrink(file){ return new Promise((res,rej)=>{ const img=new Image(); const u=URL.createObjectURL(file); img.onload=()=>{ const k=Math.min(1,1600/Math.max(img.width,img.height)); const cv=document.createElement('canvas'); cv.width=Math.round(img.width*k); cv.height=Math.round(img.height*k); cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height); URL.revokeObjectURL(u); res(cv.toDataURL('image/jpeg',0.85).split(',')[1]); }; img.onerror=rej; img.src=u; }); }
   $('#shotInput').addEventListener('change',async e=>{ const f=e.target.files[0]; if(!f||!shotTarget) return; const key=shotTarget; toast('Enviando print para o Drive…');
     const isR=rcptMode; rcptMode=false;
@@ -1244,12 +1304,12 @@ label.f textarea{min-height:84px;resize:vertical}
   $('#frr').addEventListener('submit',async e=>{ e.preventDefault();
     document.querySelectorAll('#r-legs [data-desc]').forEach(t=>setDesc(t.dataset.desc,t.value));
     const cyc=curCycle(); const L=reimbLegs(cyc); if(!L.length){ toast('Não há trechos realizados para reembolsar neste ciclo.'); return; }
-    const miss=L.filter(x=>!x.shot).length;
+    const miss=L.filter(x=>!effShot(x)).length;
     if(miss && !confirm(miss+' trecho(s) estão sem print do percurso. Gerar o relatório mesmo assim?')) return;
     if(!GS){ toast('Para gerar o PDF é preciso estar conectado ao Drive (🔌 Conexão).'); return; }
     const co=S.company; const per='Ciclo '+brFull(isoOf(cyc.a))+' a '+brFull(isoOf(cyc.b))+' • envio até '+brFull(isoOf(cyc.due)); const tot=r2(L.reduce((a,x)=>a+x.value,0));
     const payload={fileName:'Reembolso transporte '+S.costCenter+' - ciclo '+isoOf(cyc.a)+' a '+isoOf(cyc.b),company:co.name+(co.cnpj?' • CNPJ '+co.cnpj:''),consultant:co.resp||'',period:per,cc:S.costCenter,total:tot,generatedAt:new Date().toLocaleString('pt-BR'),
-      rows:L.map(x=>({date:x.d.split('-').reverse().join('/'),project:x.project,desc:x.desc||x.auto,value:x.value,from:x.from,to:x.to,shotId:x.shot?x.shot.id:'',rcptId:x.rcpt?x.rcpt.id:''}))};
+      rows:L.map(x=>({date:x.d.split('-').reverse().join('/'),project:x.project,desc:x.desc||x.auto,value:x.value,from:x.from,to:x.to,shotId:effShot(x)?effShot(x).id:'',rcptId:x.rcpt?x.rcpt.id:''}))};
     $('#r-go').disabled=true; toast('Gerando o PDF no seu Google Drive… isso leva alguns segundos.');
     try{ const url=await call('buildReimbursementReport',JSON.stringify(payload)); $('#dr').close(); toastLink('Relatório de reembolso salvo no Drive.',url); }
     catch(err){ toast('Não foi possível gerar o PDF: '+(err&&err.message||'erro')); $('#r-go').disabled=false; } });
