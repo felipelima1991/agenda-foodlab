@@ -340,6 +340,7 @@ label.f textarea{min-height:84px;resize:vertical}
       <summary><span class="ft">🚌 Linhas e tarifas</span><small>ônibus, metrô, trem e Guarulhos</small><span class="chev" aria-hidden="true">▾</span></summary>
       <div class="fold-body">
         <label class="f" style="margin-bottom:10px">Endereço de partida (casa)<input id="homeAddr"></label>
+        <p class="small" id="homeGeo" style="margin:-4px 0 10px"></p>
         <table class="fin">
           <tr><td>Ônibus municipal (SPTrans)</td><td>R$ 5,30</td></tr>
           <tr><td>Metrô / trem (CPTM)</td><td>R$ 5,40</td></tr>
@@ -596,7 +597,10 @@ label.f textarea{min-height:84px;resize:vertical}
   function backOf(d){ return (S.backM && S.backM[d]!==undefined) ? S.backM[d] : autoBack(d); }
   function dayCostOf(d){ const l=dayList(d); if(!l.length) return 0; return r2(l.reduce((a,v)=>a+fareOf(v,l),0)+backOf(d)); }
   function fromOf(v){ if(v.from) return v.from; const l=dayList(v.d); const i=l.indexOf(v); if(i<=0) return S.home; const pc=S.clients.find(x=>x.id===l[i-1].c); return pc?pc.addr:S.home; }
-  const mapsAddr = a => /guarulhos|são paulo|sao paulo/i.test(a) ? a : a+', São Paulo - SP';
+  // Endereço limpo para o Google: troca travessões, abrevia nada, garante cidade e país
+  const cleanAddr = a => String(a||'').replace(/\s*[–—]\s*/g,' - ').replace(/\bAv\.\s/g,'Avenida ').replace(/\bR\.\s/g,'Rua ').replace(/\bJd\.\s/g,'Jardim ');
+  const mapsAddr = a => { if(a && a===S.home && S.homeGeo && S.homeGeo.addr===S.home) return S.homeGeo.lat+','+S.homeGeo.lng;
+    let s=cleanAddr(a); if(!/guarulhos|são paulo|sao paulo/i.test(s)) s+=', São Paulo - SP'; return s+', Brasil'; };
   const routeUrl = (o,d) => 'https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(mapsAddr(o))+'&destination='+encodeURIComponent(mapsAddr(d))+'&travelmode=transit';
   const toMin = t => { const [a,b]=t.split(':').map(Number); return a*60+b; };
   const fromMin = m => { m=((Math.round(m)%1440)+1440)%1440; return pad(Math.floor(m/60))+':'+pad(m%60); };
@@ -666,7 +670,7 @@ label.f textarea{min-height:84px;resize:vertical}
     const cy=new Date().getFullYear(); const years=new Set([cy-1,cy,cy+1,cy+2,y]); S.visits.forEach(v=>years.add(Number(v.d.slice(0,4))));
     $('#selMonth').innerHTML=MONTHS.map((n,i)=>'<option value="'+i+'"'+(i===m?' selected':'')+'>'+n.charAt(0).toUpperCase()+n.slice(1)+'</option>').join('');
     $('#selYear').innerHTML=[...years].sort().map(a=>'<option'+(a===y?' selected':'')+'>'+a+'</option>').join('');
-    renderCalendar(y,m); renderClients(); renderFinance(); renderNF(); renderStatus(); updCopyBtn(); renderLegend(); document.querySelectorAll('.compName').forEach(el=>el.textContent=S.companion||'acompanhante'); const hl=$('#homeLines'); if(hl) hl.textContent=S.homeLines||'—'; const ha=$('#homeAddr'); if(ha && document.activeElement!==ha) ha.value=S.home||'';
+    renderCalendar(y,m); renderClients(); renderFinance(); renderNF(); renderStatus(); updCopyBtn(); renderLegend(); renderHomeGeo(); document.querySelectorAll('.compName').forEach(el=>el.textContent=S.companion||'acompanhante'); const hl=$('#homeLines'); if(hl) hl.textContent=S.homeLines||'—'; const ha=$('#homeAddr'); if(ha && document.activeElement!==ha) ha.value=S.home||'';
   }
 
   function renderCalendar(y,m){
@@ -936,7 +940,12 @@ label.f textarea{min-height:84px;resize:vertical}
   });
   document.addEventListener('keydown',e=>{ const card=e.target.closest&&e.target.closest('.card'); if(card && e.target===card && (e.key==='Enter'||e.key===' ')){ e.preventDefault(); if(!readOnly) openVisit(S.visits.find(v=>v.id===card.dataset.id)); } });
   $('#newBtn').addEventListener('click',()=>openVisit(null));
-  $('#homeAddr').addEventListener('change',e=>{ const v=e.target.value.trim(); if(v){ S.home=v; markDirty(); toast('Endereço de partida atualizado.'); } });
+  $('#homeAddr').addEventListener('change',e=>{ const v=e.target.value.trim(); if(v){ S.home=v; markDirty(); toast('Endereço de partida atualizado.'); ensureHomeGeo(true); } });
+  // Ponto fixo em coordenadas: o app de Mapas do celular deixa de confundir o endereço
+  function ensureHomeGeo(force){ if(!GS||!S.home) return; if(!force && S.homeGeo && S.homeGeo.addr===S.home) return;
+    call('geocode',S.home).then(r=>{ if(r&&r.ok){ S.homeGeo={addr:S.home,lat:r.lat,lng:r.lng,formatted:r.formatted}; markDirty(); render(); } }).catch(()=>{}); }
+  function renderHomeGeo(){ const el=$('#homeGeo'); if(!el) return; const g=S.homeGeo&&S.homeGeo.addr===S.home?S.homeGeo:null;
+    el.innerHTML=g?'📍 Localizado no mapa como: <b>'+esc(g.formatted)+'</b> — <a target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query='+g.lat+','+g.lng+'">conferir</a>':'📍 Ainda não localizado no mapa (conecte ao Drive).'; }
   $('#selMonth').addEventListener('change',e=>{S.view={year:S.view.year,month:Number(e.target.value)}; render();});
   $('#selYear').addEventListener('change',e=>{S.view={year:Number(e.target.value),month:S.view.month}; render();});
   function setSide(off){ document.body.classList.toggle('side-off',off); const t=$('#sideToggle'); t.setAttribute('aria-expanded',String(!off)); t.querySelector('.st-ico').textContent=off?'◂':'▸'; t.querySelector('.st-lbl').textContent=off?'Horas e legenda':'Recolher painel'; }
@@ -1104,7 +1113,7 @@ label.f textarea{min-height:84px;resize:vertical}
       downloadShot(); toast('Imagem baixada. Envie pelo WhatsApp ou e-mail.'); },'image/png'); });
 
   // ===== Direcionamentos da coordenação (PDFs no Drive) =====
-  const APP_VERSION='2026.11.01-b'; let serverVersion=null, dirsErr='';
+  const APP_VERSION='2026.11.01-c'; let serverVersion=null, dirsErr='';
   function checkServer(){ if(!GS) return; call('ping').then(r=>{ serverVersion=r&&r.version||'?'; }).catch(()=>{ serverVersion='antigo'; }).finally(()=>{ if(serverVersion==='antigo'||serverVersion!==APP_VERSION) toast('O Code.gs do Apps Script está desatualizado: publique uma Nova versão para ativar os direcionamentos.'); }); }
   let DIRS=[], dirsAt=0;
   const MES=['janeiro','fevereiro','marco','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
@@ -1361,7 +1370,7 @@ label.f textarea{min-height:84px;resize:vertical}
     S.nf=S.nf||{}; S.expected=S.expected||{};
     migrate();
     const now=new Date(); S.view={year:now.getFullYear(),month:now.getMonth()};
-    loaded=true; render(); scrollToday(); loadDirs(true); checkServer();
+    loaded=true; render(); scrollToday(); loadDirs(true); checkServer(); ensureHomeGeo(false);
     if(migrateChanged && GS && serverOk){ migrateChanged=false; markDirty(); }
     if(dirty){ clearTimeout(saveTimer); saveTimer=setTimeout(()=>save(false),1500); }
     else if(!baseRev && GS && serverOk && S.clients.length){ save(false); } // primeira vez: grava a agenda inicial no Drive
